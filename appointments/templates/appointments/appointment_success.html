@@ -1,0 +1,211 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   PREMIUM CONFIRMATION DESK THEME (LIGHT/DARK INTEGRATED)
+   ========================================================================== */
+.slip-view-container {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Premium Minimalist Slip Card Structuring */
+.premium-slip-card {
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+/* Elegant Success Header Accents */
+.slip-status-banner {
+    background: linear-gradient(135deg, #10b981, #059669);
+    padding: 24px;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Ultra-Bold Token Layout Target */
+.token-display-value {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+    color: #10b981;
+}
+
+/* Soft Inner Row Table Elements */
+.premium-slip-table th {
+    background-color: rgba(16, 185, 129, 0.03);
+    color: var(--bs-secondary-color);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    padding: 14px 16px;
+    border-color: var(--bs-border-color);
+}
+
+.premium-slip-table td {
+    padding: 14px 16px;
+    font-weight: 500;
+    border-color: var(--bs-border-color);
+}
+
+/* ==========================================================================
+   HIGH-PERFORMANCE TARGET PRINT-AREA SHEET OVERRIDES
+   ========================================================================== */
+@media print {
+    /* Completely isolate and delete layout nodes out of the printing tree stream */
+    body > :not(.slip-view-container),
+    .sidebar-wrapper, .navbar, .page-heading, .btn, footer, .no-print {
+        display: none !important;
+    }
+    
+    .main-content, .slip-view-container, .col-md-8 {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .premium-slip-card {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    .token-display-value {
+        color: #000 !important;
+    }
+
+    .premium-slip-table th {
+        background: #f5f5f5 !important;
+        color: #000 !important;
+        border: 1px solid #000 !important;
+    }
+
+    .premium-slip-table td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+    }
+}
+</style>
+
+<div class="container slip-view-container mt-4 mt-md-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            
+            <!-- MASTER SLIP EMBED BLOCK -->
+            <div class="card premium-slip-card" id="print-area">
+                
+                <!-- STATUS HEADER ACCENT BANNER -->
+                <div class="slip-status-banner text-white text-center">
+                    <h4 class="fw-bold mb-1">Appointment Confirmed Successfully</h4>
+                    <p class="mb-0 small opacity-90">Patient session is initialized and routed to running room queues</p>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    
+                    <!-- DIGITAL TOKEN GENERATOR CONSOLE DISPLAY -->
+                    <div class="text-center mb-5">
+                        <div class="token-display-value mb-2">
+                            {% if appointment.daily_token %}
+                                #{{ appointment.daily_token }}
+                            {% else %}
+                                <span class="fs-2 text-muted fw-bold">Future Visit</span>
+                            {% endif %}
+                        </div>
+                        <span class="text-uppercase fw-bold text-muted small tracking-widest d-block" style="font-size: 11px;">Queue Token Number</span>
+                    </div>
+
+                    <!-- SLIP DATA METRIC GRID -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered premium-slip-table align-middle mb-0">
+                            <tr>
+                                <th width="35%">Patient Reference ID</th>
+                                <td class="font-monospace text-primary">#{{ appointment.patient.patient_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Patient Identity Name</th>
+                                <td class="text-body-emphasis fw-bold">{{ appointment.patient }}</td>
+                            </tr>
+                            <tr>
+                                <th>Assigned Medical Practitioner</th>
+                                <td>{{ appointment.doctor }}</td>
+                            </tr>
+                            <tr>
+                                <th>Encounter Scheduled Date</th>
+                                <td>{{ appointment.appointment_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>Roster Queue Booking Time</th>
+                                <td>{{ appointment.appointment_time }}</td>
+                            </tr>
+                            <tr>
+                                <th>Queue Allocation Status</th>
+                                <td>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis fw-bold rounded-2 px-3 py-1.5" style="font-size: 12px;">
+                                        {{ appointment.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Consultation Financial Status</th>
+                                <td>
+                                    {% if consultation_fee_status == 'Paid' %}
+                                        <span class="badge bg-success-subtle text-success fw-bold rounded-2 px-3 py-1.5" style="font-size: 12px;">Cleared / Settled</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger fw-bold rounded-2 px-3 py-1.5" style="font-size: 12px;">Pending Processing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Waiver Exemption Eligibility</th>
+                                <td>
+                                    {% if appointment.patient.is_active_patient %}
+                                        <span class="badge bg-info-subtle text-info fw-bold rounded-2 px-3 py-1.5" style="font-size: 12px;">🎉 Active Revisit Waiver Clear</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-2 px-3 py-1.5" style="font-size: 12px;">Standard Tariff Base Fee Required</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Verified Reception Node</th>
+                                <td class="text-muted small">{{ appointment.created_by }}</td>
+                            </tr>
+                            <tr>
+                                <th>System Entry Timeline Stamp</th>
+                                <td class="text-muted small font-monospace">{{ appointment.created_at }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- FOOTER SYSTEM INTERACTION ACTIONS BAR -->
+                    <div class="d-flex gap-3 mt-5 pt-3 border-top no-print justify-content-end">
+                        <button onclick="window.print()" class="btn btn-success fw-bold px-4 py-2 rounded-3 d-inline-flex align-items-center gap-2">
+                            <span>🖨️</span> Print Token Slip
+                        </button>
+                        <a href="{% url 'appointments' %}" class="btn btn-primary fw-bold px-4 py-2 rounded-3">
+                            Create New Appointment +
+                        </a>
+                    </div>
+
+                </div> <!-- /card-body -->
+            </div> <!-- /card -->
+            
+        </div> <!-- /col-md-8 -->
+    </div> <!-- /row -->
+</div> <!-- /container -->
+{% endblock %}

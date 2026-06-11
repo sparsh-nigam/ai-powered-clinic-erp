@@ -1,0 +1,497 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+  
+    
+    /* Default: Light Mode */
+    .clinic-premium-wrapper {
+        --surface-color: #ffffff;
+        --text-heading: #0f172a;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --input-bg: #f8fafc;
+        --input-border: #cbd5e1;
+        --accent-primary: #0f766e; /* High-end Medical Teal */
+        --accent-hover: #115e59;
+        --accent-glow: rgba(15, 118, 110, 0.15);
+        --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        --shadow-lux: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        --radius-card: 24px;
+        --radius-input: 12px;
+    }
+
+    /* Dark Mode (Central App Toggle via attributes or classes) */
+    :root[data-bs-theme="dark"] .clinic-premium-wrapper,
+    html[data-theme="dark"] .clinic-premium-wrapper,
+    body[data-bs-theme="dark"] .clinic-premium-wrapper,
+    body.dark-mode .clinic-premium-wrapper,
+    body.dark-theme .clinic-premium-wrapper {
+        --surface-color: #0f172a; /* Deep elegant slate, not plain black */
+        --text-heading: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: #1e293b;
+        --input-bg: #1e293b;
+        --input-border: #334155;
+        --accent-primary: #14b8a6; /* Brighter teal for dark mode visibility */
+        --accent-hover: #2dd4bf;
+        --accent-glow: rgba(20, 184, 166, 0.2);
+        --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        --shadow-lux: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Base Card Styling */
+    .clinic-card {
+        background-color: var(--surface-color);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-lux);
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+        transition: background-color 0.4s ease, border-color 0.4s ease;
+    }
+
+    /* Subtle top accent line for brand feel */
+    .clinic-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-primary), #3b82f6);
+        z-index: 10;
+    }
+
+    .clinic-header {
+        background: transparent;
+        border-bottom: 1px solid var(--border-color);
+        padding: 2.5rem 2.5rem 1.5rem 2.5rem;
+    }
+
+    .clinic-title {
+        color: var(--text-heading);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        font-size: 1.75rem;
+    }
+
+    .clinic-subtitle {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        font-weight: 400;
+    }
+
+    /* Section Labels */
+    .section-label {
+        color: var(--accent-primary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background-color: var(--border-color);
+        opacity: 0.6;
+    }
+
+    .clinic-label {
+        color: var(--text-heading);
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 0.4rem;
+    }
+
+    /* Inputs & Selects */
+    .clinic-input {
+        background-color: var(--input-bg);
+        border: 1px solid transparent;
+        color: var(--text-heading);
+        border-radius: var(--radius-input);
+        padding: 0.85rem 1.2rem;
+        font-size: 0.95rem;
+        box-shadow: var(--shadow-soft) inset;
+        transition: all 0.3s ease;
+    }
+
+    .clinic-input::placeholder {
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+
+    .clinic-input:hover {
+        border-color: var(--input-border);
+    }
+
+    .clinic-input:focus {
+        background-color: var(--surface-color);
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px var(--accent-glow);
+        color: var(--text-heading);
+        outline: none;
+    }
+
+    select.clinic-input {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1.2em;
+        padding-right: 2.5rem;
+    }
+    
+    /* Adjust select arrow for dark mode */
+    :root[data-bs-theme="dark"] select.clinic-input,
+    html[data-theme="dark"] select.clinic-input,
+    body[data-bs-theme="dark"] select.clinic-input,
+    body.dark-mode select.clinic-input {
+         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    }
+
+    select.clinic-input option {
+        background-color: var(--surface-color);
+        color: var(--text-heading);
+    }
+
+    /* Seamless Accordion */
+    .clinic-accordion {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-card) !important;
+        overflow: hidden;
+    }
+
+    .clinic-accordion .accordion-item {
+        background: transparent;
+        border: none;
+    }
+
+    .clinic-accordion .accordion-button {
+        background-color: transparent;
+        color: var(--text-heading);
+        font-weight: 600;
+        font-size: 1.05rem;
+        padding: 1.5rem 2rem;
+        box-shadow: none;
+    }
+
+    .clinic-accordion .accordion-button::after {
+        filter: grayscale(1);
+        opacity: 0.5;
+    }
+
+    .clinic-accordion .accordion-button:not(.collapsed) {
+        background-color: var(--input-bg);
+        color: var(--accent-primary);
+    }
+
+    .clinic-accordion .accordion-body {
+        background-color: transparent;
+        padding: 0 2rem 2rem 2rem;
+    }
+
+    /* High-End Buttons */
+    .btn-clinic {
+        border-radius: var(--radius-input);
+        padding: 0.85rem 2rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.3px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+    }
+
+    .btn-clinic-primary {
+        background-color: var(--accent-primary);
+        color: #ffffff;
+        box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .btn-clinic-primary:hover {
+        background-color: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px var(--accent-glow);
+        color: #ffffff;
+    }
+
+    .btn-clinic-outline {
+        background-color: transparent;
+        color: var(--text-heading);
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-clinic-outline:hover {
+        background-color: var(--input-bg);
+        color: var(--text-heading);
+        border-color: var(--input-border);
+    }
+</style>
+
+<div class="container mt-5 clinic-premium-wrapper">
+
+    <div class="card border-0 clinic-card">
+
+        <div class="card-header clinic-header border-0">
+            <h3 class="clinic-title mb-2">Register New Patient</h3>
+            <p class="clinic-subtitle mb-0">
+                Create a new patient profile. The master record and Patient ID will be generated securely.
+            </p>
+        </div>
+
+        <div class="card-body p-4 p-md-5 pt-4">
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="section-label mb-4">
+                    Personal Information
+                </div>
+
+                <div class="row g-4 mb-5">
+
+                    <div class="col-md-2">
+                        <label class="form-label clinic-label">Title</label>
+                        <select name="title" class="form-select clinic-input border-0">
+                            <option value="">Select</option>
+                            {% for value,label in title_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label clinic-label">
+                            Full Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="name"
+                               class="form-control clinic-input border-0"
+                               placeholder="e.g. Jane Doe"
+                               required>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label clinic-label">
+                            Age <span class="text-danger">*</span>
+                        </label>
+                        <input type="number"
+                               name="age"
+                               class="form-control clinic-input border-0"
+                               min="0"
+                               placeholder="Years"
+                               required>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label clinic-label">Gender</label>
+                        <select name="gender" class="form-select clinic-input border-0">
+                            <option value="">Select</option>
+                            {% for value,label in gender_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label clinic-label">Phone</label>
+                        <input type="text"
+                               name="phone"
+                               placeholder="+1 (555) 000-0000"
+                               class="form-control clinic-input border-0">
+                    </div>
+
+                </div>
+
+                <div class="accordion clinic-accordion mb-5" id="patientAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#optionalInfo">
+                                Comprehensive Medical Details (Optional)
+                            </button>
+                        </h2>
+                        
+                        <div id="optionalInfo"
+                             class="accordion-collapse collapse"
+                             data-bs-parent="#patientAccordion">
+                             
+                            <div class="accordion-body mt-3">
+                                <div class="row g-4">
+
+                                    <div class="col-12">
+                                        <label class="form-label clinic-label">Residential Address</label>
+                                        <textarea name="address"
+                                                  rows="2"
+                                                  placeholder="Enter full street address"
+                                                  class="form-control clinic-input border-0"></textarea>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">Primary Disease / Complaint</label>
+                                        <input type="text"
+                                               name="disease"
+                                               placeholder="e.g. Hypertension"
+                                               class="form-control clinic-input border-0">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">Blood Group</label>
+                                        <select name="blood_group"
+                                                class="form-select clinic-input border-0">
+                                            <option value="">Select Group</option>
+                                            {% for value,label in blood_groups %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">Known Allergies</label>
+                                        <input type="text"
+                                               name="allergies"
+                                               placeholder="e.g. Penicillin, Peanuts"
+                                               class="form-control clinic-input border-0">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">
+                                            Chronic Conditions
+                                        </label>
+
+                                        <div class="row">
+
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Diabetes">
+                                                    <label class="form-check-label">
+                                                        Diabetes
+                                                    </label>
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Hypertension">
+                                                    <label class="form-check-label">
+                                                        Hypertension
+                                                    </label>
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Kidney Disease">
+                                                    <label class="form-check-label">
+                                                        Kidney Disease
+                                                    </label>
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Liver Disease">
+                                                    <label class="form-check-label">
+                                                        Liver Disease
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6">
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Thyroid">
+                                                    <label class="form-check-label">
+                                                        Thyroid
+                                                    </label>
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Asthma">
+                                                    <label class="form-check-label">
+                                                        Asthma
+                                                    </label>
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                        type="checkbox"
+                                                        name="conditions"
+                                                        value="Heart Disease">
+                                                    <label class="form-check-label">
+                                                        Heart Disease
+                                                    </label>
+                                                </div>
+
+                                                <input type="text"
+                                                    name="custom_condition"
+                                                    class="form-control mt-2"
+                                                    placeholder="Other Condition">
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">Height (cm)</label>
+                                        <input type="number"
+                                               step="0.01"
+                                               name="height"
+                                               placeholder="0.00"
+                                               class="form-control clinic-input border-0">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label clinic-label">Weight (kg)</label>
+                                        <input type="number"
+                                               step="0.01"
+                                               name="weight"
+                                               placeholder="0.00"
+                                               class="form-control clinic-input border-0">
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-color); opacity: 1; margin: 2rem 0;">
+
+                <div class="d-flex justify-content-end gap-3">
+                    <a href="{% url 'patients' %}"
+                       class="btn btn-clinic btn-clinic-outline text-decoration-none">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="btn btn-clinic btn-clinic-primary">
+                        Register Patient
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

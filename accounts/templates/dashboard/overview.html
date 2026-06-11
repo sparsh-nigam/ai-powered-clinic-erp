@@ -1,0 +1,651 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="premium-dashboard-wrapper container-fluid px-0">
+    
+    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-soft pb-3">
+        <div>
+            <h2 class="fw-bold text-primary-theme mb-1" style="font-family: 'Inter', sans-serif; letter-spacing: -0.5px;">
+                <i class="bi bi-grid-1x2-fill text-clinical me-2"></i>Executive Overview
+            </h2>
+            <p class="text-secondary text-sm mb-0">Live operational metrics and clinical performance analytics.</p>
+        </div>
+        <div class="d-none d-md-block">
+            <span class="badge bg-light-adjust text-primary-theme border border-soft px-3 py-2 rounded-pill font-monospace shadow-sm d-flex align-items-center">
+                <span class="live-pulse-dot me-2"></span> System Sync Active
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="{% url 'patients' %}" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">Total Patients</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ total_patients }}</h3>
+                        </div>
+                        <div class="icon-box icon-indigo">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-xs fw-semibold">Registered in system</span>
+                        <i class="bi bi-arrow-right text-indigo"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="{% url 'appointments' %}" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">Today's Appointments</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ today_appointments }}</h3>
+                        </div>
+                        <div class="icon-box icon-blue">
+                            <i class="bi bi-calendar2-event-fill"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-xs fw-semibold">Scheduled for today</span>
+                        <i class="bi bi-arrow-right text-clinical"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="{% url 'queue_management' %}" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card border-left-warning">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">Queue Waiting</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ queue_waiting }}</h3>
+                        </div>
+                        <div class="icon-box icon-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-xs fw-semibold">Patients in waiting area</span>
+                        <i class="bi bi-arrow-right text-warning-dark"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="{% url 'queue_management' %}" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card border-left-danger">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">In Consultation</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ in_consultation }}</h3>
+                        </div>
+                        <div class="icon-box icon-danger">
+                            <i class="bi bi-heart-pulse-fill"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <span class="live-indicator me-2"></span>
+                            <span class="text-secondary text-xs fw-semibold">Currently with doctors</span>
+                        </div>
+                        <i class="bi bi-arrow-right text-danger"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="metric-card border-left-emerald static-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="metric-label mb-1">Today's Revenue</p>
+                        <h3 class="metric-value text-emerald mb-0">₹{{ today_revenue }}</h3>
+                    </div>
+                    <div class="icon-box icon-emerald">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                </div>
+                <div class="metric-footer">
+                    <span class="badge bg-emerald-soft text-emerald border-0 rounded-pill px-2 py-1 text-xxs fw-bold">
+                        <i class="bi bi-graph-up-arrow me-1"></i> Daily Collection
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="/patients" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card border-left-purple">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">Active Billing</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ active_billing_sessions }}</h3>
+                        </div>
+                        <div class="icon-box icon-purple">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-xs fw-semibold">Pending settlements</span>
+                        <i class="bi bi-arrow-right text-purple"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="metric-card premium-hover action-card border-left-orange" data-bs-toggle="modal" data-bs-target="#transfersModal" style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="metric-label mb-1">Pending Transfers</p>
+                        <h3 class="metric-value text-primary-theme mb-0">{{ pending_transfers }}</h3>
+                    </div>
+                    <div class="icon-box icon-orange">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                </div>
+                <div class="metric-footer d-flex justify-content-between align-items-center">
+                    <span class="text-secondary text-xs fw-semibold">View transfer requests</span>
+                    <i class="bi bi-box-arrow-up-right text-orange"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <a href="#doctorPerformanceSection" class="text-decoration-none">
+                <div class="metric-card premium-hover action-card border-left-cyan">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="metric-label mb-1">Total Doctors</p>
+                            <h3 class="metric-value text-primary-theme mb-0">{{ total_doctors }}</h3>
+                        </div>
+                        <div class="icon-box icon-cyan">
+                            <i class="bi bi-person-badge-fill"></i>
+                        </div>
+                    </div>
+                    <div class="metric-footer d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-xs fw-semibold">View doctor analytics</span>
+                        <i class="bi bi-chevron-down text-cyan"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div id="doctorPerformanceSection" class="row mb-4 pt-3">
+        <div class="col-12">
+            <div class="metric-card p-0 overflow-hidden" style="box-shadow: var(--shadow-lift);">
+                <div class="card-header bg-transparent border-bottom border-soft py-4 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1 fw-bold text-primary-theme text-sm uppercase tracking-wider">
+                            <i class="bi bi-bar-chart-fill text-clinical me-2"></i>Performance Analytics
+                        </h5>
+                        <p class="text-secondary text-xs mb-0">Top 5 Consulting Physicians by Patient Volume</p>
+                    </div>
+                    <button class="btn btn-sm btn-premium shadow-xs fw-bold px-3" data-bs-toggle="modal" data-bs-target="#doctorsModal">
+                        View All Directory <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+                <div class="card-body p-4 bg-chart-area">
+                    <div style="position: relative; height: 380px; width: 100%;">
+                        <canvas id="doctorPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="doctorsModal" tabindex="-1" aria-labelledby="doctorsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content premium-modal border-0 shadow-lg">
+            <div class="modal-header border-bottom border-soft bg-light-adjust py-3">
+                <h5 class="modal-title fw-bold text-primary-theme text-sm uppercase tracking-wider" id="doctorsModalLabel">
+                    <i class="bi bi-people-fill text-clinical me-2"></i>Doctor Workload Registry
+                </h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 premium-table text-primary-theme">
+                        <thead class="bg-light-adjust text-secondary text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="ps-4 py-3 border-soft">Practitioner Profile</th>
+                                <th class="text-center py-3 border-soft">Total Volume</th>
+                                <th class="text-center py-3 border-soft">Today's Load</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in doctor_snapshot %}
+                            <tr class="border-bottom border-soft transition-all">
+                                <td class="ps-4 py-3 fw-bold">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-soft icon-blue rounded-circle d-flex justify-content-center align-items-center me-3 shadow-xs" style="width: 38px; height: 38px;">
+                                            <i class="bi bi-person-fill"></i>
+                                        </div>
+                                        <div>
+                                            <span class="d-block">{{ item.doctor.name }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center py-3">
+                                    <span class="badge bg-light-adjust text-primary-theme border border-soft px-3 py-1 font-monospace">{{ item.total_patients }}</span>
+                                </td>
+                                <td class="text-center py-3">
+                                    <span class="badge bg-emerald-soft text-emerald border border-emerald-subtle px-3 py-1 font-monospace">{{ item.today_patients }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-5 text-secondary">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                                    No practitioners found in the registry.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transfersModal" tabindex="-1" aria-labelledby="transfersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content premium-modal border-0 shadow-lg">
+            <div class="modal-header border-bottom border-soft bg-light-adjust py-3">
+                <h5 class="modal-title fw-bold text-primary-theme text-sm uppercase tracking-wider" id="transfersModalLabel">
+                    <i class="bi bi-arrow-left-right text-orange me-2"></i>Active Transfer Pipeline
+                </h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 premium-table text-primary-theme">
+                        <thead class="bg-light-adjust text-secondary text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="ps-4 py-3 border-soft">Patient Name</th>
+                                <th class="py-3 border-soft">Originating Dept.</th>
+                                <th class="py-3 border-soft">Target Specialist</th>
+                                <th class="text-center py-3 border-soft">Routing Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transfer in pending_transfer_list %}
+                            <tr class="border-bottom border-soft transition-all">
+                                <td class="ps-4 py-3 fw-bold">{{ transfer.appointment.patient.name }}</td>
+                                <td class="py-3 text-secondary"><i class="bi bi-arrow-bar-right me-1 text-muted"></i>{{ transfer.from_doctor.name }}</td>
+                                <td class="py-3 text-primary-theme fw-bold"><i class="bi bi-geo-alt-fill me-1 text-clinical opacity-75"></i>{{ transfer.to_doctor.name }}</td>
+                                <td class="text-center py-3">
+                                    {% if transfer.priority == 'Urgent' or transfer.priority == 'urgent' or transfer.priority == 'URGENT' %}
+                                        <span class="badge bg-danger text-white px-3 py-1 rounded-pill shadow-xs"><i class="bi bi-exclamation-circle me-1"></i>Urgent</span>
+                                    {% else %}
+                                        <span class="badge bg-primary text-white px-3 py-1 rounded-pill shadow-xs">Routine</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-secondary">
+                                    <div class="mb-3">
+                                        <i class="bi bi-check2-circle fs-1 text-emerald opacity-75"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-primary-theme mb-1">Pipeline Clear</h6>
+                                    <p class="text-sm mb-0">No Pending Transfer Requests at this time.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    /* =========================================================================
+       ERP CONTROLLED THEME VARIABLES (Ignores device preferences)
+       ========================================================================= */
+    :root {
+        /* Light Mode Defaults */
+        --bg-dashboard: #f4f7fb;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        
+        /* Core Accents */
+        --accent-primary: #2563eb;
+        
+        /* Premium Shadows */
+        --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        --shadow-lift: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        
+        /* Utility Backgrounds */
+        --bg-light-adjust: #f8fafc;
+        --bg-chart-area: #ffffff;
+        
+        /* Chart specific */
+        --chart-grid-color: #f1f5f9;
+        --chart-text-color: #64748b;
+    }
+
+    /* Target ERP Theme Classes Only */
+    .theme-dark, [data-bs-theme="dark"], .dark-mode {
+        --bg-dashboard: #0b1120;
+        --card-bg: #131c31;
+        --border-color: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        
+        /* Core Accents Adjustments for Dark */
+        --accent-primary: #3b82f6;
+        
+        /* Shadows for Dark Mode */
+        --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        --shadow-lift: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+        --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+        
+        /* Utility Backgrounds */
+        --bg-light-adjust: rgba(255, 255, 255, 0.02);
+        --bg-chart-area: #0f1629;
+        
+        /* Chart specific */
+        --chart-grid-color: #1e293b;
+        --chart-text-color: #94a3b8;
+    }
+
+    /* =========================================================================
+       COMPONENT STYLES
+       ========================================================================= */
+    .premium-dashboard-wrapper {
+        background-color: var(--bg-dashboard);
+        min-height: 100vh;
+        color: var(--text-primary);
+        padding-bottom: 3rem;
+    }
+
+    .text-primary-theme { color: var(--text-primary) !important; }
+    .text-secondary { color: var(--text-secondary) !important; }
+    .border-soft { border-color: var(--border-color) !important; }
+    .bg-light-adjust { background-color: var(--bg-light-adjust) !important; }
+    .bg-chart-area { background-color: var(--bg-chart-area) !important; }
+    .text-clinical { color: var(--accent-primary) !important; }
+
+    /* Custom Colors & Gradients for Icons */
+    .text-emerald { color: #10b981 !important; }
+    .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1) !important; }
+    .border-emerald-subtle { border-color: rgba(16, 185, 129, 0.2) !important; }
+    
+    .text-indigo { color: #6366f1 !important; }
+    .text-warning-dark { color: #d97706 !important; }
+    .text-danger { color: #ef4444 !important; }
+    .text-purple { color: #8b5cf6 !important; }
+    .text-orange { color: #f97316 !important; }
+    .text-cyan { color: #06b6d4 !important; }
+
+    /* Premium Icon Boxes with subtle gradients */
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+        box-shadow: inset 0 2px 4px 0 rgba(255, 255, 255, 0.1);
+    }
+    .icon-indigo { background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(99,102,241,0.2)); color: #6366f1; }
+    .icon-blue { background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.2)); color: #3b82f6; }
+    .icon-warning { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.2)); color: #d97706; }
+    .icon-danger { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.2)); color: #ef4444; }
+    .icon-emerald { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.2)); color: #10b981; }
+    .icon-purple { background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.2)); color: #8b5cf6; }
+    .icon-orange { background: linear-gradient(135deg, rgba(249,115,22,0.1), rgba(249,115,22,0.2)); color: #f97316; }
+    .icon-cyan { background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(6,182,212,0.2)); color: #06b6d4; }
+
+    /* Premium Metric Card */
+    .metric-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 22px;
+        height: 100%;
+        box-shadow: var(--shadow-base);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+    }
+
+    .action-card .metric-footer i {
+        transition: transform 0.25s ease;
+        opacity: 0.7;
+    }
+
+    .premium-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lift);
+        border-color: var(--accent-primary);
+    }
+    
+    .premium-hover:hover .metric-footer i {
+        transform: translateX(4px);
+        opacity: 1;
+    }
+
+    /* Modals & Tables */
+    .premium-modal {
+        background-color: var(--card-bg);
+    }
+    .premium-table th { font-weight: 700; border-top: none !important; }
+    .premium-table td { color: var(--text-primary); }
+    .transition-all { transition: background-color 0.15s ease; }
+    .table-hover tbody tr:hover { background-color: var(--bg-light-adjust) !important; }
+
+    /* Specific Operational Border Highlights */
+    .border-left-emerald { border-left: 4px solid #10b981; }
+    .border-left-warning { border-left: 4px solid #f59e0b; }
+    .border-left-danger { border-left: 4px solid #ef4444; }
+    .border-left-purple { border-left: 4px solid #8b5cf6; }
+    .border-left-orange { border-left: 4px solid #f97316; }
+    .border-left-cyan { border-left: 4px solid #06b6d4; }
+
+    .metric-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+    }
+
+    .metric-value {
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .metric-footer {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    /* Buttons */
+    .btn-premium {
+        background-color: var(--accent-primary);
+        color: #ffffff;
+        border: none;
+        transition: all 0.2s ease;
+    }
+    .btn-premium:hover {
+        background-color: #1d4ed8;
+        color: #ffffff;
+        transform: translateY(-1px);
+    }
+
+    /* Indicators */
+    .live-pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background-color: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background-color: #ef4444;
+        border-radius: 50%;
+        animation: blinker 1.5s linear infinite;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    }
+
+    @keyframes blinker {
+        50% { opacity: 0.3; }
+    }
+
+    /* Typography Helpers */
+    .text-sm { font-size: 0.875rem !important; }
+    .text-xs { font-size: 0.815rem !important; }
+    .text-xxs { font-size: 0.725rem !important; }
+    .uppercase { text-transform: uppercase; }
+    .tracking-wider { letter-spacing: 0.05em; }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // Data Extraction from Django Context
+        const doctorNames = [];
+        const doctorTotals = [];
+        
+        {% for item in doctor_snapshot|slice:":5" %}
+            doctorNames.push("{{ item.doctor.name|escapejs }}");
+            doctorTotals.push({{ item.total_patients|default:0 }});
+        {% endfor %}
+
+        // Fallback for completely empty databases
+        if (doctorNames.length === 0) {
+            doctorNames.push("Awaiting Data", "Awaiting Data");
+            doctorTotals.push(0, 0);
+        }
+
+        const canvas = document.getElementById('doctorPerformanceChart');
+        const ctx = canvas.getContext('2d');
+        
+        // Extract CSS Variables for seamless theme matching
+        const style = getComputedStyle(document.body);
+        const gridColor = style.getPropertyValue('--chart-grid-color').trim() || '#e2e8f0';
+        const textColor = style.getPropertyValue('--chart-text-color').trim() || '#64748b';
+
+        // Create a 5-Star Premium Linear Gradient for the bars
+        // Gradient scales horizontally across the canvas
+        const gradient = ctx.createLinearGradient(0, 0, 800, 0);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.85)');   // Deep Blue
+        gradient.addColorStop(1, 'rgba(6, 182, 212, 0.85)');    // Vibrant Cyan
+
+        const hoverGradient = ctx.createLinearGradient(0, 0, 800, 0);
+        hoverGradient.addColorStop(0, 'rgba(37, 99, 235, 1)');  // Darker Blue on hover
+        hoverGradient.addColorStop(1, 'rgba(8, 145, 178, 1)');  // Darker Cyan on hover
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: doctorNames,
+                datasets: [{
+                    label: 'Total Appointments Managed',
+                    data: doctorTotals,
+                    backgroundColor: gradient,
+                    hoverBackgroundColor: hoverGradient,
+                    borderRadius: 6, // Elegant rounded corners
+                    borderSkipped: false,
+                    barPercentage: 0.45, // Thinner, sleeker bars
+                    categoryPercentage: 0.8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Renders horizontally
+                layout: {
+                    padding: { right: 20 } // Give breathing room on the right
+                },
+                plugins: {
+                    legend: {
+                        display: false // Clean look, no redundant legend needed
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)', // Premium dark tooltip
+                        titleFont: { size: 13, family: 'Inter', weight: '600' },
+                        bodyFont: { size: 14, weight: '700', family: 'Inter' },
+                        padding: 14,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.x + ' Patients Total';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: gridColor,
+                            drawBorder: false,
+                            borderDash: [5, 5], // Professional dashed grid lines
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: { family: 'Inter', size: 12, weight: '500' },
+                            padding: 10
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false, // Remove vertical grid lines for cleaner look
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: { family: 'Inter', size: 13, weight: '600' },
+                            padding: 15
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

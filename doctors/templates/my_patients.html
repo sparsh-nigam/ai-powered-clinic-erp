@@ -1,0 +1,293 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   PREMIUM CLINIC "MY PATIENTS" STYLESHEET
+   Uses native Bootstrap CSS variables to seamlessly integrate with your 
+   central ERP dark/light mode toggle without hardcoding colors.
+   ========================================================================== */
+
+/* Typography & General */
+.page-heading h2 {
+    font-weight: 800 !important;
+    letter-spacing: -0.5px;
+    color: var(--bs-heading-color, var(--bs-body-color)) !important;
+}
+.page-heading p {
+    font-weight: 500;
+    color: var(--bs-secondary-color) !important;
+}
+.page-heading .card-body h2 {
+    color: var(--bs-primary) !important;
+}
+
+/* Premium Card Architecture */
+.card {
+    background-color: var(--bs-card-bg) !important;
+    border: 1px solid var(--bs-border-color) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04) !important;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-bs-theme="dark"] .card, 
+body.dark-mode .card, 
+.dark .card {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Inputs & Form Controls */
+.form-control, .form-select {
+    background-color: var(--bs-tertiary-bg, rgba(0,0,0,0.02)) !important;
+    border: 1px solid var(--bs-border-color) !important;
+    color: var(--bs-body-color) !important;
+    border-radius: 12px !important;
+    padding: 0.85rem 1.2rem !important;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: none !important;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 0 0 4px rgba(var(--bs-primary-rgb, 37, 99, 235), 0.1) !important;
+}
+.input-group-text {
+    background-color: var(--bs-tertiary-bg, rgba(0,0,0,0.02)) !important;
+    border: 1px solid var(--bs-border-color) !important;
+    border-right: none !important;
+    color: var(--bs-secondary-color) !important;
+    border-top-left-radius: 12px !important;
+    border-bottom-left-radius: 12px !important;
+}
+.input-group .form-control {
+    border-left: none !important;
+}
+
+/* Premium Button Styling */
+.btn-primary {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    padding: 0.85rem 1.5rem !important;
+    box-shadow: 0 4px 14px rgba(var(--bs-primary-rgb, 37, 99, 235), 0.25) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--bs-primary-rgb, 37, 99, 235), 0.35) !important;
+}
+.btn-sm.btn-primary {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+}
+
+/* Modern Data Table */
+.table {
+    margin-bottom: 0 !important;
+    color: var(--bs-body-color) !important;
+}
+.table th {
+    background-color: transparent !important;
+    color: var(--bs-secondary-color) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.8px;
+    border-bottom: 2px solid var(--bs-border-color) !important;
+    padding: 1.2rem 1rem !important;
+    border-top: none !important;
+}
+.table td {
+    border-bottom: 1px solid var(--bs-border-color) !important;
+    padding: 1.2rem 1rem !important;
+    vertical-align: middle;
+    background-color: transparent !important;
+    color: var(--bs-body-color) !important;
+    font-weight: 500;
+}
+.table-hover tbody tr {
+    transition: background-color 0.2s ease;
+}
+.table-hover tbody tr:hover td {
+    background-color: var(--bs-tertiary-bg, rgba(0,0,0,0.03)) !important;
+}
+
+/* Badges */
+.badge.bg-primary {
+    background-color: rgba(var(--bs-primary-rgb, 37, 99, 235), 0.1) !important;
+    color: var(--bs-primary) !important;
+    border: 1px solid rgba(var(--bs-primary-rgb, 37, 99, 235), 0.2) !important;
+    padding: 0.55em 0.9em !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem;
+}
+
+/* Empty State Styling */
+.bi-person-x {
+    color: var(--bs-secondary-color) !important;
+    opacity: 0.5;
+}
+</style>
+
+<div class="page-heading">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                My Patients
+            </h2>
+            <p class="text-muted mb-0">
+                View and access patients previously consulted by you.
+            </p>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center px-4 py-3">
+                <small class="text-muted d-block">
+                    Total Patients
+                </small>
+                <h2 class="fw-bold mb-0">
+                    {{ my_patients|length }}
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-8">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ search }}"
+                            class="form-control"
+                            placeholder="Search by Patient ID, Name or Phone Number"
+                        >
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <select
+                        name="sort"
+                        class="form-select"
+                    >
+                        <option value="">
+                            Latest Visit
+                        </option>
+                        <option
+                            value="oldest_visit"
+                            {% if sort == 'oldest_visit' %}selected{% endif %}
+                        >
+                            Oldest Visit
+                        </option>
+                        <option
+                            value="name_asc"
+                            {% if sort == 'name_asc' %}selected{% endif %}
+                        >
+                            Name A-Z
+                        </option>
+                        <option
+                            value="name_desc"
+                            {% if sort == 'name_desc' %}selected{% endif %}
+                        >
+                            Name Z-A
+                        </option>
+                        <option
+                            value="id"
+                            {% if sort == 'id' %}selected{% endif %}
+                        >
+                            Patient ID
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-lg-1">
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
+                        Go
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Patient Name</th>
+                        <th>Phone</th>
+                        <th>Age</th>
+                        <th>Total Visits</th>
+                        <th>Last Visit</th>
+                        <th class="text-center">
+                            Action
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in my_patients %}
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ patient.patient_id }}
+                            </strong>
+                        </td>
+                        <td>
+                            {{ patient.name }}
+                        </td>
+                        <td>
+                            {{ patient.phone|default:"-" }}
+                        </td>
+                        <td>
+                            {{ patient.age }}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">
+                                {{ patient.total_visits }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ patient.last_visit|date:"d M, Y" }}
+                        </td>
+                        <td class="text-center">
+                            <a
+                                href="{% url 'my_patient_history' patient.id %}"
+                                class="btn btn-sm btn-primary"
+                            >
+                                <i class="bi bi-clock-history me-1"></i>
+                                View History
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td
+                            colspan="7"
+                            class="text-center py-5"
+                        >
+                            <i class="bi bi-person-x fs-2 d-block mb-2"></i>
+                            No patients found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

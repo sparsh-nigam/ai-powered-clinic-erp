@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription - {{ appointment.patient.name }}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* -------------------------------------------------------------
+           SCREEN & UI STYLES
+           ------------------------------------------------------------- */
+        :root {
+            --brand-primary: #1e3a8a; /* Deep Navy */
+            --brand-accent: #b45309; /* Champagne Gold */
+            --text-dark: #1e293b;
+            --text-muted: #475569;
+            --border-light: #cbd5e1;
+            --bg-light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-font-smoothing: antialiased;
+            font-size: 13px; /* More compact base font */
+        }
+
+        .print-controls {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .btn-print {
+            background-color: var(--brand-primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.2);
+            transition: all 0.2s ease;
+        }
+        .btn-print:hover { background-color: #152c6b; }
+
+        /* -------------------------------------------------------------
+           PAPER / PRINT DOCUMENT STYLES
+           ------------------------------------------------------------- */
+        .prescription-paper {
+            background: #ffffff;
+            width: 100%;
+            max-width: 800px;
+            padding: 30px 40px; /* Reduced spacing */
+            box-sizing: border-box;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Master Table for repeating Header & Footer on Multi-page prints */
+        .master-print-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+        .master-print-table > thead > tr > td,
+        .master-print-table > tbody > tr > td,
+        .master-print-table > tfoot > tr > td {
+            border: none;
+            padding: 0;
+        }
+
+        /* Header */
+        .clinic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--brand-accent);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .clinic-brand h1 {
+            margin: 0 0 4px 0;
+            color: var(--brand-primary);
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+        .clinic-brand p {
+            margin: 0;
+            font-size: 11px;
+            color: var(--brand-accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .clinic-contact {
+            text-align: right;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        .clinic-contact p { margin: 0; }
+        .clinic-contact strong { color: var(--text-dark); }
+
+        /* Patient Demographics Card - Highly Compact */
+        .patient-demographics {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-left: 3px solid var(--brand-primary);
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px 15px;
+        }
+        .demo-item { display: flex; flex-direction: column; }
+        .demo-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .demo-value {
+            font-weight: 700;
+            color: var(--text-dark);
+            font-size: 13px;
+        }
+        .demo-value.highlight { color: var(--brand-primary); }
+
+        /* Clinical Sections */
+        .clinical-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .clinical-section { flex: 1; }
+        .clinical-section-full { width: 100%; margin-bottom: 20px; }
+        
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--brand-primary);
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: var(--brand-accent);
+            margin-right: 8px;
+            border-radius: 1px;
+        }
+        .clinical-text {
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0;
+            color: var(--text-dark);
+            padding-left: 14px;
+        }
+
+        /* -------------------------------------------------------------
+           PREMIUM SEPARATED TABLES (COMPACT)
+           ------------------------------------------------------------- */
+        .rx-header {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--brand-primary);
+            margin-bottom: 10px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .rx-header span {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--brand-accent);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding-top: 6px;
+        }
+
+        .premium-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .premium-table th {
+            background-color: #f1f5f9;
+            color: var(--brand-primary);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .premium-table td {
+            padding: 8px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-dark);
+            vertical-align: top;
+        }
+        .premium-table tbody tr:last-child td { border-bottom: none; }
+        .premium-table tbody tr:nth-child(even) { background-color: #fcfcfc; }
+
+        .item-name {
+            font-weight: 700;
+            color: var(--brand-primary);
+            font-size: 13px;
+            display: block;
+        }
+        .item-type-badge {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 4px;
+        }
+
+        /* Badge Colors */
+        .badge-medicine { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .badge-test { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .badge-procedure { background-color: #fffbeb; color: #d97706; border: 1px solid #fef08a; }
+        .badge-therapy { background-color: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+        .badge-instruction { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        /* Advice Box */
+        .clinical-box {
+            background-color: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+
+        /* -------------------------------------------------------------
+           FOOTER / SIGNATURE (Fixed to bottom of print page)
+           ------------------------------------------------------------- */
+        .footer-signature {
+            padding-top: 30px;
+            display: flex;
+            justify-content: flex-end;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            text-align: center;
+            min-width: 200px;
+        }
+        .signature-line {
+            border-bottom: 1px solid var(--brand-primary);
+            margin-bottom: 8px;
+            height: 40px;
+        }
+        .doc-name {
+            font-weight: 700;
+            color: var(--brand-primary);
+            font-size: 14px;
+            margin: 0 0 2px 0;
+            font-family: 'Cinzel', serif;
+        }
+        .doc-spec {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: 500;
+        }
+
+        /* -------------------------------------------------------------
+           PRINT SPECIFIC STYLES
+           ------------------------------------------------------------- */
+        @media print {
+            body { background: none; padding: 0; margin: 0; }
+            .print-controls { display: none !important; }
+            .prescription-paper {
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            @page { size: A4; margin: 12mm; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-controls">
+        <button class="btn-print" onclick="window.print()">Print Prescription</button>
+    </div>
+
+    <div class="prescription-paper">
+
+        {% if not consultation_record %}
+            <div style="text-align: center; padding: 100px 0;">
+                <h2 style="color: var(--brand-primary); font-family: 'Cinzel', serif;">No Digital Evaluation Found</h2>
+                <p style="color: var(--text-muted);">This consultation was completed using a physical prescription.</p>
+            </div>
+        {% else %}
+
+            <table class="master-print-table">
+                
+                <thead>
+                    <tr>
+                        <td>
+                            <div class="clinic-header">
+                                <div class="clinic-brand">
+                                    <h1>ABC CLINIC</h1>
+                                    <p>Center of Medical Excellence</p>
+                                </div>
+                                <div class="clinic-contact">
+                                    <p><strong>Clinic Address Here</strong></p>
+                                    <p>City, State, ZIP Code</p>
+                                    <p style="margin-top: 3px;">📞 +91-XXXXXXXXXX</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="patient-demographics">
+                                <div class="demo-item">
+                                    <span class="demo-label">Patient Name</span>
+                                    <span class="demo-value highlight">{{ appointment.patient.name }}</span>
+                                </div>
+                                <div class="demo-item">
+                                    <span class="demo-label">Patient ID</span>
+                                    <span class="demo-value">{{ appointment.patient.patient_id }}</span>
+                                </div>
+                                <div class="demo-item">
+                                    <span class="demo-label">Age / Gender</span>
+                                    <span class="demo-value">{{ appointment.patient.age }} Yrs / {{ appointment.patient.get_gender_display }}</span>
+                                </div>
+                                <div class="demo-item">
+                                    <span class="demo-label">Consulting Doctor</span>
+                                    <span class="demo-value">Dr. {{ appointment.doctor }}</span>
+                                </div>
+                                <div class="demo-item">
+                                    <span class="demo-label">Date</span>
+                                    <span class="demo-value">{{ appointment.appointment_date }}</span>
+                                </div>
+                                <div class="demo-item">
+                                    <span class="demo-label">Token Number</span>
+                                    <span class="demo-value">#{{ appointment.daily_token|stringformat:"02d" }}</span>
+                                </div>
+                            </div>
+
+                            <div class="clinical-row">
+                                {% if consultation_record.chief_complaint %}
+                                <div class="clinical-section">
+                                    <div class="section-title">Chief Complaint</div>
+                                    <p class="clinical-text">{{ consultation_record.chief_complaint }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if consultation_record.diagnosis %}
+                                <div class="clinical-section">
+                                    <div class="section-title">Diagnosis</div>
+                                    <p class="clinical-text" style="font-weight: 700; color: var(--brand-primary);">{{ consultation_record.diagnosis }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if consultation_record.clinical_notes %}
+                            <div class="clinical-section-full">
+                                <div class="section-title">Clinical Notes</div>
+                                <p class="clinical-text">{{ consultation_record.clinical_notes }}</p>
+                            </div>
+                            {% endif %}
+
+                            <div class="rx-header">
+                                ℞ <span>Prescription (Medicines)</span>
+                            </div>
+                            <table class="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th width="40%">Medicine Name</th>
+                                        <th width="30%">Dosage</th>
+                                        <th width="30%">Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="medicine-tbody">
+                                    {% for item in treatment_items %}
+                                        {% if item.item_type == 'Medicine' %}
+                                        <tr>
+                                            <td>
+                                                <span class="item-type-badge badge-medicine">Medicine</span>
+                                                <span class="item-name">{{ item.name }}</span>
+                                            </td>
+                                            <td>{{ item.dosage }}</td>
+                                            <td>{{ item.duration }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <div class="section-title">Other Treatments</div>
+                            <table class="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th width="40%">Type & Name</th>
+                                        <th width="30%">Details / Dosage</th>
+                                        <th width="30%">Duration / Instruction</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="other-tbody">
+                                    {% for item in treatment_items %}
+                                        {% if item.item_type != 'Medicine' %}
+                                        <tr>
+                                            <td>
+                                                <span class="item-type-badge badge-{{ item.item_type|lower }}">{{ item.item_type }}</span>
+                                                <span class="item-name">{{ item.name }}</span>
+                                            </td>
+                                            <td>{{ item.dosage }}</td>
+                                            <td>{{ item.duration }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <div class="clinical-row">
+                                {% if consultation_record.advice %}
+                                <div class="clinical-section">
+                                    <div class="section-title">Advice</div>
+                                    <div class="clinical-box">{{ consultation_record.advice }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if consultation_record.followup_instruction %}
+                                <div class="clinical-section">
+                                    <div class="section-title">Follow Up</div>
+                                    <div class="clinical-box" style="border-left: 3px solid var(--brand-accent); font-weight: 600;">
+                                        {{ consultation_record.followup_instruction }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                        </td>
+                    </tr>
+                </tbody>
+
+                <tfoot>
+                    <tr>
+                        <td>
+                            <div class="footer-signature">
+                                <div class="signature-box">
+                                    <div class="signature-line"></div>
+                                    <p class="doc-name">Dr. {{ appointment.doctor }}</p>
+                                    <p class="doc-spec">{{ appointment.doctor.specialization }}</p>
+                                    <p class="doc-spec" style="font-size: 9px; margin-top: 4px; color: var(--border-light); text-transform: uppercase;">Consulting Doctor</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+
+            </table>
+
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const medBody = document.getElementById('medicine-tbody');
+            if (medBody && medBody.children.length === 0) {
+                medBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 15px; font-style: italic; font-size: 12px;">No medicines prescribed.</td></tr>';
+            }
+
+            const otherBody = document.getElementById('other-tbody');
+            if (otherBody && otherBody.children.length === 0) {
+                otherBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 15px; font-style: italic; font-size: 12px;">No other treatments prescribed.</td></tr>';
+            }
+        });
+    </script>
+</body>
+</html>

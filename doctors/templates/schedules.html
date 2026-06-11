@@ -1,0 +1,601 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0" id="erpScheduleWorkstation">
+
+    <div class="p-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap pb-2 mb-3 border-bottom gap-2">
+            <div>
+                <h1 class="h5 fw-bold text-body mb-0">Schedules</h1>
+                <small class="text-muted font-sans d-block" style="font-size: 0.75rem;">Doctor Appointment & Assignment Timeline &bull; Read Only Schedule View</small>
+            </div>
+        </div>
+
+        <div class="card border mb-3 shadow-xs bg-body-tertiary" id="searchFilterEnclosure">
+            <div class="card-body p-2.5">
+                <div class="row g-2">
+                    <div class="col-md-6 position-relative">
+                        <label for="doctorSearchSelector" class="form-label text-uppercase fw-bold text-secondary tracking-wider m-0 mb-1 d-block" style="font-size: 0.68rem;">
+                            <i class="bi bi-search text-primary me-1"></i> Search Doctor
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-transparent border-0 text-muted ps-1 pe-2"><i class="bi bi-person"></i></span>
+                            <input type="text" id="doctorSearchSelector" class="form-control border-0 bg-transparent text-xs text-body font-bold p-0 shadow-none custom-underlined-field" placeholder="Search Doctor Name..." autocomplete="off" oninput="processSearchInput(this)" onkeydown="traverseDropdownKeyboard(event)">
+                        </div>
+
+                        <div id="autocompleteDropdownContainer" class="dropdown-menu shadow-lg w-100 p-1 border border-secondary-subtle bg-body overflow-y-auto" style="max-height: 220px; display: none; position: absolute; top: 100%; left: 0; z-index: 1060;">
+                            </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="scheduleDatePicker" class="form-label text-uppercase fw-bold text-secondary tracking-wider m-0 mb-1 d-block" style="font-size: 0.68rem;">
+                            <i class="bi bi-calendar-event text-primary me-1"></i> Schedule Date
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-transparent border-0 text-muted ps-1 pe-2"><i class="bi bi-calendar3"></i></span>
+                            <input type="date" id="scheduleDatePicker" class="form-control border-0 bg-transparent text-xs text-body font-bold p-0 shadow-none custom-underlined-field" value="{{ selected_date }}" onchange="processDateChange(this)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <div class="card border border-dashed text-center py-4 my-4 bg-body-tertiary animate-fade {% if selected_doctor %}d-none{% endif %}" id="unselectedScheduleStatePlaceholder">
+                <div class="card-body">
+                <div class="text-primary mb-2" style="font-size: 2rem; line-height: 1;"><i class="bi bi-person-vcard"></i></div>
+                <h6 class="text-xs fw-bold text-body mb-1">Select Doctor to View Schedule</h6>
+                <p class="text-muted font-sans mx-auto mb-0 lh-sm text-xxs" style="max-width: 380px;">
+                    Use the search field above to select a doctor to view appointments.
+                </p>
+            </div>
+        </div>
+
+        <div class="row g-3 animate-fade {% if not selected_doctor %}d-none{% endif %}" id="scheduleWorkspaceCanvas">
+            
+            <div class="col-12" id="filterSummarySection">
+                <div class="p-2 bg-body-tertiary border rounded d-flex align-items-center flex-wrap gap-3 text-xxs">
+                    <span class="text-muted text-uppercase fw-bold font-monospace"><i class="bi bi-info-circle me-1 text-primary"></i>Active Filter Summary:</span>
+                    <span class="text-body fw-bold">Doctor: <span id="summaryDoctorName" class="text-primary">--</span></span>
+                    <span class="text-muted">|</span>
+                    <span class="text-body fw-bold">Selected Date: <span id="summarySelectedDate" class="text-primary">--</span></span>
+                </div>
+            </div>
+
+            <div class="col-xl-9 col-lg-8 col-md-12">
+                <div class="card border shadow-xs overflow-hidden bg-body">
+                    
+                    <div class="card-header border-bottom bg-body-tertiary p-0">
+                        <ul class="nav nav-tabs border-bottom-0 clinical-tabs px-2 pt-1.5" id="scheduleWorkflowTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active py-2 px-3 fw-bold text-uppercase tracking-wider text-xxs" id="today-tab-link" data-bs-toggle="tab" data-bs-target="#pane-today" type="button" role="tab">
+                                    <i class="bi bi-calendar2-check me-1"></i> Selected Date Schedule
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-2 px-3 fw-bold text-uppercase tracking-wider text-xxs" id="future-tab-link" data-bs-toggle="tab" data-bs-target="#pane-future" type="button" role="tab">
+                                    <i class="bi bi-calendar2-week me-1"></i> Future Schedule
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="tab-content" id="scheduleWorkflowContent">
+                        
+                        <div class="tab-pane fade show active" id="pane-today" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 table-borderless text-body" id="todayScheduleTableInstance">
+                                    <thead class="bg-body-tertiary border-bottom text-muted font-bold text-uppercase tracking-wider text-xxs">
+                                        <tr>
+                                            <th class="ps-3 py-2">Date</th>
+                                            <th class="py-2 text-center">Token</th>
+                                            <th class="py-2">Patient ID</th>
+                                            <th class="py-2">Patient Name</th>
+                                            <th class="py-2">Status</th>
+                                            <th class="py-2 font-monospace">Completion Time</th>
+                                            <th class="pe-3 py-2 text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="todayTableDynamicBody">
+
+                                    {% for appointment in today_appointments %}
+                                    <tr>
+                                        <td class="ps-3">{{ appointment.appointment_date }}</td>
+                                        <td class="text-center">{{ appointment.daily_token }}</td>
+                                        <td>{{ appointment.patient.patient_id }}</td>
+                                        <td>{{ appointment.patient.name }}</td>
+                                        <td>{{ appointment.status }}</td>
+                                        <td>
+                                        {% if appointment.consultation_record and appointment.consultation_record.completed_at %}
+                                            {{ appointment.consultation_record.completed_at|date:"h:i A" }}
+                                        {% else %}
+                                            --
+                                        {% endif %}
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a href="{% url 'my_patient_history' appointment.patient.id %}" class="btn btn-sm btn-outline-primary">
+                                                View History
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            No appointments found for selected date.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pane-future" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 table-borderless text-body" id="futureScheduleTableInstance">
+                                    <thead class="bg-body-tertiary border-bottom text-muted font-bold text-uppercase tracking-wider text-xxs">
+                                        <tr>
+                                            <th class="ps-3 py-2">Date</th>
+                                            <th class="text-center py-2">Token</th>
+                                            <th class="py-2">Type</th>
+                                            <th class="py-2">Patient ID</th>
+                                            <th class="py-2">Patient Name</th>
+                                            <th class="py-2 font-monospace">Scheduled Time</th>
+                                            <th class="py-2">Status</th>
+                                            <th class="pe-3 py-2 text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="futureTableDynamicBody">
+
+                                    {% for appointment in future_appointments %}
+                                    <tr>
+                                        <td class="ps-3">{{ appointment.appointment_date }}</td>
+                                        <td class="text-center">{{ appointment.daily_token }}</td>
+                                        <td>-</td>
+                                        <td>{{ appointment.patient.patient_id }}</td>
+                                        <td>{{ appointment.patient.name }}</td>
+                                        <td>{{ appointment.appointment_time }}</td>
+                                        <td>{{ appointment.status }}</td>
+                                        <td class="text-end pe-3">
+                                            <a href="#" class="btn btn-sm btn-outline-primary">
+                                                View History
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                            No future appointments available.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-12">
+                <div class="card border shadow-xs bg-body d-flex flex-column overflow-hidden h-100">
+                    <div class="card-header border-bottom bg-body-tertiary py-2 px-3">
+                        <span class="text-uppercase fw-bold text-body tracking-wider text-xxs">
+                            <i class="bi bi-card-heading text-warning me-1.5"></i> Assignments & Notices
+                        </span>
+                    </div>
+                    
+                    <div class="card-body p-2.5 flex-grow-1 overflow-y-auto" style="max-height: calc(100vh - 260px);">
+                        <ul class="list-unstyled m-0 d-flex flex-column gap-1.5 font-sans" id="noticesDynamicList">
+                            </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    #erpScheduleWorkstation {
+        --text-purple-adjust: #a855f7;
+        --purple-subtle-bg: rgba(168, 85, 247, 0.12);
+    }
+    
+    #erpScheduleWorkstation .text-sm { font-size: 0.825rem !important; }
+    #erpScheduleWorkstation .text-xs { font-size: 0.775rem !important; }
+    #erpScheduleWorkstation .text-xxs { font-size: 0.715rem !important; }
+    #erpScheduleWorkstation .btn-xxs { padding: 0.15rem 0.35rem; font-size: 0.7rem; border-radius: 0.2rem; }
+    #erpScheduleWorkstation .leading-sm { line-height: 1.25 !important; }
+    #erpScheduleWorkstation .gap-1.5 { gap: 0.35rem !important; }
+    
+    #erpScheduleWorkstation .custom-underlined-field {
+        border-bottom: 2px solid var(--bs-border-color) !important;
+        color: var(--bs-body-color) !important;
+        border-radius: 0 !important;
+        font-size: 0.78rem !important;
+    }
+    #erpScheduleWorkstation .custom-underlined-field:focus {
+        box-shadow: none !important;
+        background-color: transparent !important;
+        border-bottom-color: var(--bs-primary) !important;
+    }
+
+    #erpScheduleWorkstation .type-badge-new { background-color: rgba(13, 110, 253, 0.12) !important; color: #0d6efd !important; border: 1px solid rgba(13, 110, 253, 0.2) !important; }
+    #erpScheduleWorkstation .type-badge-revisit { background-color: rgba(111, 66, 193, 0.12) !important; color: #6f42c1 !important; border: 1px solid rgba(111, 66, 193, 0.2) !important; }
+
+    #erpScheduleWorkstation .unique-schedule-table th { padding: 0.45rem 0.4rem !important; font-weight: 700 !important; }
+    #erpScheduleWorkstation .unique-schedule-table td { padding: 0.375rem 0.4rem !important; color: inherit !important; background-color: transparent !important; }
+    #erpScheduleWorkstation .transition-row { transition: background-color 0.08s ease-in-out; border-bottom: 1px solid var(--bs-border-color-translucent) !important; }
+    #erpScheduleWorkstation .transition-row:hover { background-color: rgba(13, 110, 253, 0.04) !important; }
+
+    #erpScheduleWorkstation .clinical-tabs .nav-link { color: var(--bs-secondary-color); border: none; border-bottom: 2px solid transparent; background: transparent; opacity: 0.75; transition: all 0.1s ease; }
+    #erpScheduleWorkstation .clinical-tabs .nav-link.active { color: var(--bs-primary) !important; border-bottom: 2px solid var(--bs-primary) !important; font-weight: 700 !important; opacity: 1; }
+    #erpScheduleWorkstation .clinical-tabs .nav-link:hover { opacity: 1; color: var(--bs-primary); }
+
+    #erpScheduleWorkstation .assignment-bullet-strip {
+        padding: 0.35rem 0.5rem !important;
+        border-radius: 0.25rem;
+        background-color: var(--bs-body-tertiary-bg);
+        border-left: 3px solid var(--bs-secondary-color);
+    }
+    #erpScheduleWorkstation .assignment-bullet-strip.priority-stat { border-left-color: var(--bs-danger); }
+    #erpScheduleWorkstation .assignment-bullet-strip.priority-warn { border-left-color: var(--bs-warning); }
+    #erpScheduleWorkstation .assignment-bullet-strip.priority-info { border-left-color: var(--bs-info); }
+
+    #erpScheduleWorkstation .animate-fade { animation: erpScheduleFadeIn 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes erpScheduleFadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+    #erpScheduleWorkstation .animate-pulse { animation: erpSchedulePulse 2s infinite; }
+    @keyframes erpSchedulePulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style>
+
+<script>
+    // BACKEND PHASE 1 COMPLETE
+    // Doctor search now uses Django doctor data
+    // Appointment data still uses demo data
+    // Replace demo schedule data during next integration phase
+
+    // Temporary demo appointment data
+    // Will be removed after appointment integration
+    const demoDoctorRegistry = [
+        {
+            id: 101,
+            name: "Dr Amit Sharma",
+            specialization: "Pediatrics",
+            totalCount: 11,
+            notices: [
+                { title: "Review MRI Report PT1022", type: "priority-stat", detail: "Neuro-trace validations are pending analysis parameters prior to validation checks." },
+                { title: "Staff Meeting 4 PM", type: "priority-info", detail: "ERP synchronization, late dues clearing adjustments, and transaction rules audit alignment." }
+            ],
+            today: [
+                { date: "30 May 2026", token: 1, type: "New", patientId: "PT-4091", name: "Meera Deshmukh", status: "In Consultation", compTime: "--" },
+                { date: "30 May 2026", token: 2, type: "Revisit", patientId: "PT-1104", name: "Vikram Aditya", status: "Completed", compTime: "09:52 AM" },
+                { date: "30 May 2026", token: 3, type: "New", patientId: "PT-9981", name: "Rohan Malaviya", status: "Pending", compTime: "--" }
+            ],
+            future: [
+                { date: "31 May 2026", token: 1, type: "New", patientId: "PT-1244", name: "Gaurav Kapoor", time: "09:00 AM", status: "Pending" },
+                { date: "01 June 2026", token: 1, type: "Revisit", patientId: "PT-8911", name: "Shreya Ghoshal", time: "09:30 AM", status: "Pending" }
+            ]
+        },
+        {
+            id: 102,
+            name: "Dr Amrita Singh",
+            specialization: "Gynecology",
+            totalCount: 7,
+            notices: [
+                { title: "Follow-up Review Required", type: "priority-warn", detail: "Audit patient record timelines across updated longitudinal datasets index sheets." }
+            ],
+            today: [
+                { date: "30 May 2026", token: 1, type: "New", patientId: "PT-3342", name: "Suman Rao", status: "Transfer Requested", compTime: "--" },
+                { date: "30 May 2026", token: 2, type: "Revisit", patientId: "PT-5561", name: "Pooja Hegde", status: "Transferred In", compTime: "10:14 AM" }
+            ],
+            future: [
+                { date: "31 May 2026", token: 1, type: "New", patientId: "PT-7711", name: "Aditi Rao", time: "11:00 AM", status: "Pending" }
+            ]
+        },
+        {
+            id: 103,
+            name: "Dr Aman Verma",
+            specialization: "Orthopedics",
+            totalCount: 6,
+            notices: [
+                { title: "Review Post-Op Radiograph Array", type: "priority-stat", detail: "Confirm internal target fixation markers on PT-8902." }
+            ],
+            today: [
+                { date: "30 May 2026", token: 1, type: "Revisit", patientId: "PT-8902", name: "Rajesh Kumar", status: "Transferred Out", compTime: "--" },
+                { date: "30 May 2026", token: 2, type: "New", patientId: "PT-4451", name: "Sunita Sharma", status: "Cancelled", compTime: "--" }
+            ],
+            future: []
+        },
+        {
+            id: 104,
+            name: "Dr Soniya Singh",
+            specialization: "Cardiology",
+            totalCount: 14,
+            notices: [
+                { title: "Review Eco Scan Parameters PT1022", type: "priority-stat", detail: "Coronary pathway trace validation pending authorization pass." }
+            ],
+            today: [
+                { date: "30 May 2026", token: 1, type: "New", patientId: "PT-1022", name: "Anjali Rao", status: "In Consultation", compTime: "--" }
+            ],
+            future: [
+                { date: "02 June 2026", token: 1, type: "New", patientId: "PT-6671", name: "Kabir Bedi", time: "10:30 AM", status: "Pending" }
+            ]
+        },
+        {
+            id: 105,
+            name: "Dr Raj Verma",
+            specialization: "Neurology",
+            totalCount: 8,
+            notices: [
+                { title: "Review MRI Report PT1022", type: "priority-warn", detail: "Structural update review required before morning workflow dispatch loops." }
+            ],
+            today: [
+                { date: "30 May 2026", token: 1, type: "Revisit", patientId: "PT-2094", name: "Ramesh Kumar", status: "Completed", compTime: "11:15 AM" }
+            ],
+            future: []
+        }
+    ];
+
+    // Real doctors coming from Django backend
+    const realDoctors = [
+        {% for doctor in doctors %}
+        {
+            id: {{ doctor.id }},
+            name: "{{ doctor.title }} {{ doctor.name }}",
+            specialization: "{{ doctor.specialization }}"
+        },
+        {% endfor %}
+    ];
+
+    let activeDropdownIndex = -1;
+    let currentlyFilteredPool = [];
+    let globallySelectedDoctorObject = null;
+
+    // Selected doctor tracked states
+    let selectedDoctorId = null;
+    let selectedDoctorName = "";
+    let selectedDoctorSpecialization = "";
+
+    document.addEventListener("DOMContentLoaded", function() {
+        {% if selected_doctor %}
+
+        selectedDoctorId = {{ selected_doctor.id }};
+        selectedDoctorName = "{{ selected_doctor.title }} {{ selected_doctor.name }}";
+        selectedDoctorSpecialization = "{{ selected_doctor.specialization }}";
+
+        globallySelectedDoctorObject = {
+            id: {{ selected_doctor.id }},
+            name: "{{ selected_doctor.title }} {{ selected_doctor.name }}",
+            specialization: "{{ selected_doctor.specialization }}"
+        };
+
+        const searchInput =
+            document.getElementById(
+                "doctorSearchSelector"
+            );
+
+        if(searchInput){
+            searchInput.value =
+                globallySelectedDoctorObject.name;
+        }
+
+        {% endif %}
+        // Verification logger for real backend datasets
+        console.log(realDoctors);
+
+        // Run initial configuration checks to append default runtime filter summary views
+        syncFilterSummaryDisplay();
+
+        document.addEventListener("click", function (e) {
+            const dropdown = document.getElementById("autocompleteDropdownContainer");
+            const searchField = document.getElementById("doctorSearchSelector");
+            if (dropdown && e.target !== searchField && e.target !== dropdown) {
+                dropdown.style.display = "none";
+            }
+        });
+    });
+
+    /**
+     * Filters input data vectors in real-time matching text strings natively without page requests
+     */
+    function processSearchInput(inputBox) {
+        const query = inputBox.value.toLowerCase().trim();
+        const dropdown = document.getElementById("autocompleteDropdownContainer");
+        if (!dropdown) return;
+        
+        if (query.length === 0) {
+            hideAutocompleteDropdown();
+            return;
+        }
+
+        currentlyFilteredPool = realDoctors.filter(doc => 
+            doc.name.toLowerCase().includes(query) || doc.specialization.toLowerCase().includes(query)
+        );
+
+        if (currentlyFilteredPool.length === 0) {
+            dropdown.innerHTML = `<div class="text-muted text-xxs p-2 font-sans italic">No matching clinicians indexed.</div>`;
+            dropdown.style.display = "block";
+            activeDropdownIndex = -1;
+            return;
+        }
+
+        activeDropdownIndex = -1;
+        dropdown.innerHTML = "";
+        currentlyFilteredPool.forEach((doc, idx) => {
+            const itemElement = document.createElement("button");
+            itemElement.type = "button";
+            itemElement.className = "dropdown-item text-start d-flex justify-content-between align-items-center py-1 px-2 font-sans border-0 rounded text-xs text-body shadow-none";
+            itemElement.id = `autocomplete-item-${idx}`;
+            
+            // Resolve temporary appt metric from demo data to keep layout fully structured
+            const demoMatch = demoDoctorRegistry.find(d => d.name.toLowerCase().includes(doc.name.toLowerCase()));
+            const apptCount = demoMatch ? demoMatch.totalCount : 0;
+
+            itemElement.innerHTML = `
+                <div>
+                    <strong class="text-primary">${doc.name}</strong>
+                    <span class="text-muted text-xxs d-block font-normal">Specialization: ${doc.specialization}</span>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs">${apptCount} Appts</span>
+            `;
+            
+            itemElement.onclick = function() {
+                executeSelectionRouting(doc);
+            };
+            
+            dropdown.appendChild(itemElement);
+        });
+        dropdown.style.display = "block";
+    }
+
+    /**
+     * Handles keyboard controls over suggestions listing
+     */
+    function traverseDropdownKeyboard(event) {
+        const dropdown = document.getElementById("autocompleteDropdownContainer");
+        if (!dropdown || dropdown.style.display === "none" || currentlyFilteredPool.length === 0) return;
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            activeDropdownIndex = (activeDropdownIndex + 1) % currentlyFilteredPool.length;
+            highlightActiveDropdownItem();
+        } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            activeDropdownIndex = (activeDropdownIndex - 1 + currentlyFilteredPool.length) % currentlyFilteredPool.length;
+            highlightActiveDropdownItem();
+        } else if (event.key === "Enter") {
+            event.preventDefault();
+            if (activeDropdownIndex >= 0 && activeDropdownIndex < currentlyFilteredPool.length) {
+                executeSelectionRouting(currentlyFilteredPool[activeDropdownIndex]);
+            }
+        } else if (event.key === "Escape") {
+            hideAutocompleteDropdown();
+        }
+    }
+
+    function highlightActiveDropdownItem() {
+        const dropdown = document.getElementById("autocompleteDropdownContainer");
+        if (!dropdown) return;
+        const items = dropdown.querySelectorAll(".dropdown-item");
+        items.forEach((item, idx) => {
+            if (idx === activeDropdownIndex) {
+                item.classList.add("active", "bg-primary", "text-white");
+                item.scrollIntoView({ block: "nearest" });
+            } else {
+                item.classList.remove("active", "bg-primary", "text-white");
+            }
+        });
+    }
+
+    function hideAutocompleteDropdown() {
+        const dropdown = document.getElementById("autocompleteDropdownContainer");
+        if (dropdown) dropdown.style.display = "none";
+        activeDropdownIndex = -1;
+    }
+
+    /**
+     * Instantly inflates layout states once clinician context is explicitly resolved
+     */
+    function executeSelectionRouting(doc) {
+        const searchInput = document.getElementById("doctorSearchSelector");
+        const placeholder = document.getElementById("unselectedScheduleStatePlaceholder");
+        const workspace = document.getElementById("scheduleWorkspaceCanvas");
+        const selectedDate =
+            document.getElementById(
+                "scheduleDatePicker"
+            ).value;
+
+        window.location.href =
+            `/doctor/schedules/?doctor=${doc.id}&date=${selectedDate}`;
+    }
+
+    /**
+     * Intercepts chronological validation pickers to update view labels dynamically
+     */
+    function processDateChange(datePickerElement) {
+
+        syncFilterSummaryDisplay();
+
+        const selectedDate = datePickerElement.value;
+
+        if (selectedDoctorId) {
+
+            window.location.href =
+                `/doctor/schedules/?doctor=${selectedDoctorId}&date=${selectedDate}`;
+
+        }
+    }
+
+    /**
+     * Manages reactive transformations across summary strip data variables
+     */
+    function syncFilterSummaryDisplay() {
+        const summaryPanel = document.getElementById("filterSummarySection");
+        const docLabel = document.getElementById("summaryDoctorName");
+        const dateLabel = document.getElementById("summarySelectedDate");
+        const datePicker = document.getElementById("scheduleDatePicker");
+
+        if (!summaryPanel || !docLabel || !dateLabel || !datePicker) return;
+
+        if (globallySelectedDoctorObject) {
+            docLabel.textContent = globallySelectedDoctorObject.name + " (" + globallySelectedDoctorObject.specialization + ")";
+            
+            // Format standard HTML date values into clear hospital layout terminology
+            const rawDateValue = datePicker.value;
+            if (rawDateValue) {
+                const parsedDate = new Date(rawDateValue);
+                if (!isNaN(parsedDate.getTime())) {
+                    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+                    dateLabel.textContent = parsedDate.toLocaleDateString('en-GB', options);
+                } else {
+                    dateLabel.textContent = rawDateValue;
+                }
+            } else {
+                dateLabel.textContent = "--";
+            }
+            summaryPanel.classList.remove("d-none");
+        } else {
+            summaryPanel.classList.add("d-none");
+        }
+    }
+
+    /**
+     * Assigns precise semantic coloring classes targeting status rules configurations
+     */
+    function resolveStatusBadgeMarkup(status) {
+        let dynamicClass = "bg-secondary-subtle text-secondary border-secondary-subtle";
+        let loopPulseIcon = "";
+
+        switch(status) {
+            case "Pending":
+                dynamicClass = "bg-warning-subtle text-warning border-warning-subtle";
+                break;
+            case "In Consultation":
+                dynamicClass = "bg-primary-subtle text-primary border-primary-subtle";
+                loopPulseIcon = `<i class="bi bi-circle-fill text-danger text-xxs me-1 animate-pulse"></i>`;
+                break;
+            case "Completed":
+                dynamicClass = "bg-success-subtle text-success border-success-subtle";
+                break;
+            case "Cancelled":
+                dynamicClass = "bg-danger-subtle text-danger border-danger-subtle";
+                break;
+            case "Transfer Requested":
+                dynamicClass = "bg-dark-subtle text-body border-secondary-subtle";
+                break;
+            case "Transferred In":
+                dynamicClass = "bg-info-subtle text-info border-info-subtle";
+                break;
+            case "Transferred Out":
+                dynamicClass = "bg-body-secondary text-muted border-secondary-subtle";
+                break;
+        }
+        return `<span class="badge status-pill text-xxs px-1.5 py-0.5 border font-bold ${dynamicClass}">${loopPulseIcon}${status}</span>`;
+    }
+
+    
+</script>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   PREMIUM LIGHT / DARK DYNAMIC MATRIX THEMING
+   ========================================================================== */
+.premium-invoice-container {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Elegant Soft Card Structuring */
+.invoice-premium-card {
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Branding & Typography Hierarchy */
+.brand-header-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.invoice-badge-status {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Minimalist Inner Layout Info Blocks */
+.info-block-card {
+    background-color: rgba(120, 120, 120, 0.03);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 20px;
+    height: 100%;
+}
+
+.info-block-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2563eb;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+/* Clean Ledger Grid Minimal Matrix */
+.premium-invoice-table th {
+    background-color: rgba(37, 99, 235, 0.04);
+    color: #2563eb;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    padding: 14px 16px;
+    border-color: var(--bs-border-color);
+}
+
+.premium-invoice-table td {
+    padding: 16px;
+    border-color: rgba(120, 120, 120, 0.08);
+}
+
+/* Embedded Nested Subtables */
+.nested-items-grid {
+    background-color: rgba(0, 0, 0, 0.01);
+    border-radius: 8px;
+    border: 1px solid var(--bs-border-color) !important;
+}
+
+.nested-items-grid th {
+    background-color: transparent !important;
+    color: var(--bs-secondary-color) !important;
+    font-size: 11px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.nested-items-grid td {
+    padding: 8px 12px !important;
+    font-size: 13px;
+}
+
+/* Accounting Summary Counter Metric Blocks */
+.metric-summary-box {
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 1px solid var(--bs-border-color);
+}
+.metric-total { border-left: 4px solid #3b82f6; background-color: rgba(59, 130, 246, 0.03); }
+.metric-paid { border-left: 4px solid #10b981; background-color: rgba(16, 185, 129, 0.03); }
+.metric-due { border-left: 4px solid #ef4444; background-color: rgba(239, 68, 68, 0.03); }
+
+/* ==========================================================================
+   HIGH-CONTRAST MONOCHROME PRINT SHEET OVERRIDES
+   ========================================================================== */
+@media print {
+    .sidebar-wrapper, .navbar, .page-heading, .btn, .no-print, footer {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    .invoice-premium-card {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+    body, .premium-invoice-container {
+        background: white !important;
+        color: black !important;
+    }
+    .info-block-card, .metric-summary-box {
+        background: transparent !important;
+        border: 1px solid #000 !important;
+        border-radius: 8px !important;
+    }
+    .brand-header-title {
+        -webkit-text-fill-color: #000 !important;
+        color: #000 !important;
+    }
+    .premium-invoice-table th {
+        background: #f0f0f0 !important;
+        color: #000 !important;
+        border: 1px solid #000 !important;
+    }
+    .premium-invoice-table td, .nested-items-grid, .nested-items-grid th, .nested-items-grid td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+    }
+}
+</style>
+
+<div class="container-fluid premium-invoice-container py-2">
+    
+    <!-- CONSOLE TOP INTERACTION TOOLBAR BANNER -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print page-heading">
+        <div>
+            <h4 class="fw-bold mb-0">Invoice Presentation View</h4>
+            <small class="text-muted">Review, export, or print finalized transactions records.</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2">
+                <span>🖨️</span> Print Statement
+            </button>
+            <a href="{% url 'download_invoice_pdf' billing_session.id %}" class="btn btn-outline-primary fw-bold">
+                📥 Download PDF
+            </a>
+            <a href="{{ request.META.HTTP_REFERER }}" class="btn btn-light border fw-bold">
+                ← Back
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN STATEMENT CONTAINER -->
+    <div class="card invoice-premium-card mb-5">
+        <div class="card-body p-4 p-md-5">
+            
+            <!-- BRANDING HEADER LEDGER LINE -->
+            <div class="row align-items-start invoice-section pb-4 border-bottom g-4">
+                <div class="col-sm-6">
+                    <h1 class="brand-header-title mb-1">SMART CLINIC ERP</h1>
+                    <p class="text-muted small mb-0 fw-medium">Advanced Healthcare System Node Engine</p>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <h4 class="fw-bold tracking-tight mb-2">ACCOUNT STATEMENT</h4>
+                    <div class="text-muted small">
+                        <span class="d-block mb-1"><strong>Invoice Number:</strong> {{ billing_session.session_number }}</span>
+                        <span class="d-block mb-2"><strong>Statement Date:</strong> {{ billing_session.created_at|date:"d M Y h:i A" }}</span>
+                    </div>
+                    <span class="invoice-badge-status {% if billing_session.session_status == 'Completed' %}bg-success text-white{% else %}bg-warning text-dark{% endif %} d-inline-block">
+                        {{ billing_session.session_status }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- ADMINISTRATIVE PATIENT METADATA INFO BLOCKS -->
+            <div class="row invoice-section g-4">
+                <div class="col-md-6">
+                    <div class="info-block-card">
+                        <div class="info-block-title">Patient Account Mapping</div>
+                        <h5 class="fw-bold mb-2">{{ patient }}</h5>
+                        <div class="text-muted small space-y-1">
+                            <span class="d-block"><strong>Patient Reference ID:</strong> #{{ patient.patient_id }}</span>
+                            <span class="d-block"><strong>Account Matrix Classification:</strong> {{ billing_session.visit_type }} Ledger Node</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-block-card">
+                        <div class="info-block-title">Accounting Session Metadata</div>
+                        <h5 class="fw-bold mb-2">System Tracking Audit</h5>
+                        <div class="text-muted small space-y-1">
+                            <span class="d-block"><strong>Session Tracker:</strong> {{ billing_session.session_number }}</span>
+                            <span class="d-block"><strong>Initial Entry Timeline:</strong> {{ billing_session.created_at|date:"d M Y h:i A" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ITEMIZED TRANSACTION MASTER LOGIC GRID -->
+            <div class="table-responsive mb-4 invoice-section">
+                <table class="table premium-invoice-table align-middle border">
+                    <thead>
+                        <tr>
+                            <th width="50%">Charge Description & Breakdown Matrix</th>
+                            <th class="text-end" width="16%">Subtotal</th>
+                            <th class="text-end" width="16%">Processed Paid</th>
+                            <th class="text-end" width="16%">Balance Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>
+                                <div class="d-flex justify-content-between align-items-center {% if transaction.items.exists %}mb-3{% endif %}">
+                                    <span class="fw-bold text-body-emphasis" style="font-size: 15px;">{{ transaction.transaction_type }}</span>
+                                    <span class="text-muted small fw-medium">Ref #{{ transaction.id }}</span>
+                                </div>
+
+                                {% if transaction.items.exists %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm nested-items-grid mb-1">
+                                        <thead>
+                                            <tr>
+                                                <th>Itemized Row Description</th>
+                                                <th class="text-center" width="12%">Qty</th>
+                                                <th class="text-end" width="20%">Unit Charge</th>
+                                                <th class="text-end" width="20%">Line Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in transaction.items.all %}
+                                            <tr>
+                                                <td class="text-muted">{{ item.item_name }}</td>
+                                                <td class="text-center text-muted">{{ item.quantity }}</td>
+                                                <td class="text-end text-muted">₹{{ item.price }}</td>
+                                                <td class="text-end fw-medium text-body-emphasis">₹{{ item.total_price }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-semibold">₹{{ transaction.total_amount }}</td>
+                            <td class="text-end text-success fw-semibold">₹{{ transaction.paid_amount }}</td>
+                            <td class="text-end text-danger fw-semibold">₹{{ transaction.pending_amount }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- FINANCIAL DASHBOARD AGGREGATEDCOUNTERS OVERVIEW -->
+            <div class="row invoice-section g-3">
+                <div class="col-md-4">
+                    <div class="metric-summary-box metric-total">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 11px;">Aggregated Gross Bill</small>
+                        <h3 class="fw-bold tracking-tight mb-0">₹{{ total_bill }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-summary-box metric-paid">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 11px;">Aggregated Total Paid</small>
+                        <h3 class="fw-bold tracking-tight text-success mb-0">₹{{ total_paid }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-summary-box metric-due">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 11px;">Outstanding Balance Due</small>
+                        <h3 class="fw-bold tracking-tight text-danger mb-0">₹{{ total_pending }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLOSURE AND AUTHORIZED SIGN-OFF PANEL SECTION -->
+            <div class="row mt-5 pt-3 align-items-center g-4">
+                <div class="col-md-7">
+                    <div class="p-3 border rounded-3 bg-light-subtle" style="font-size: 13px; max-width: 480px;">
+                        <span class="fw-bold d-block mb-2 text-secondary">Summary Statement Ledger Ledger</span>
+                        <div class="text-muted">
+                            <span class="d-block mb-1">Gross Account Statement Volume: <strong>₹{{ total_bill }}</strong></span>
+                            <span class="d-block mb-1">Total Clear Collections Liquid Balance: <strong>₹{{ total_paid }}</strong></span>
+                            <span class="d-block">Remaining Account Balances Unpaid: <strong class="text-danger">₹{{ total_pending }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5 text-md-end">
+                    <div class="pe-md-4" style="margin-top: 20px;">
+                        <span class="text-muted small d-block mb-1">Verified Authenticator Node</span>
+                        <h6 class="fw-bold text-body-emphasis mb-0">Authorized Signature</h6>
+                        <hr class="w-50 ms-md-auto my-3" style="border-top: 2px solid var(--bs-body-color); opacity: 0.6;">
+                        <small class="text-muted d-block" style="font-size: 11px;">Smart Clinic ERP Billing Infrastructure Network</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYSTEM SYSTEM FOOTER NOTICE METADATA -->
+            <div class="text-center mt-5 pt-4 text-muted border-top" style="font-size: 12px; letter-spacing: 0.2px;">
+                <p class="mb-1">This document is a running live computer-generated operational statement summary report configuration.</p>
+                <p class="fw-semibold mb-0">Thank you for utilizing the Smart Clinic ERP ecosystem network services.</p>
+            </div>
+
+        </div> <!-- /card-body -->
+    </div> <!-- /card -->
+</div> <!-- /container-fluid -->
+{% endblock %}

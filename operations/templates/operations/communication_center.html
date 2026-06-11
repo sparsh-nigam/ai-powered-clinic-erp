@@ -1,0 +1,121 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <h3 class="mb-4">
+        Communication Center
+    </h3>
+
+    <div class="card">
+
+        <div class="card-header">
+            <h5>Follow-Ups Due Today</h5>
+        </div>
+
+        <div class="card-body">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Phone</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for followup in due_today %}
+
+                    <tr>
+                        <td>{{ followup.patient.name }}</td>
+                        <td>{{ followup.patient.phone }}</td>
+                        <td>{{ followup.followup_due_date }}</td>
+
+                        <td>
+                            <a
+                                href="{% url 'send_whatsapp_followup' followup.id %}"
+                                target="_blank"
+                                class="btn btn-success btn-sm">
+
+                                WhatsApp
+
+                            </a>
+
+                            <button class="btn btn-primary btn-sm">
+                                SMS
+                            </button>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="4">
+                            No follow-ups due today
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <div class="card mt-4">
+
+        <div class="card-header">
+            <h5>Upcoming Follow-Ups</h5>
+        </div>
+
+        <div class="card-body">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Phone</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for followup in upcoming_followups %}
+
+                    <tr>
+                        <td>{{ followup.patient.name }}</td>
+                        <td>{{ followup.patient.phone }}</td>
+                        <td>{{ followup.followup_due_date }}</td>
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="3">
+                            No upcoming follow-ups
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

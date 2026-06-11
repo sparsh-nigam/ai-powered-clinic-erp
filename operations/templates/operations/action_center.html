@@ -1,0 +1,601 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   PREMIUM ACTION CENTER THEME MATRIX (LIGHT/DARK MODE SYNCHRONIZED)
+   ========================================================================== */
+.action-center-wrapper {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Premium Sleek Soft Cards with High-Contrast Outlines */
+.premium-action-card {
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.premium-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    border-color: #3b82f6;
+}
+
+/* Clearer Form Borders For Unmatched Shift Legibility */
+.form-control, .form-select {
+    border: 1px solid var(--bs-border-color) !important;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Document Dropdown Interactivity Indicators */
+.file-viewer-select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* Smooth Minimalist Progress Badges */
+.workflow-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Interactive Status Control Buttons */
+.btn-action-node {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-action-node:active {
+    transform: scale(0.96);
+}
+
+/* Deep High-End Visual Card Gradients */
+.bg-gradient-patient { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; }
+.bg-gradient-token   { background: linear-gradient(135deg, #10b981, #059669); border: none; }
+.bg-gradient-status  { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; }
+.bg-gradient-revisit { background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; }
+</style>
+
+<div class="action-center-wrapper py-1">
+    <div class="page-heading mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h3 class="fw-bold tracking-tight mb-1" style="letter-spacing: -0.5px;">Patient Action Center</h3>
+                <p class="text-muted mb-0">Consultation workflow and appointment operations management</p>
+            </div>
+            <a href="{% url 'queue_management' %}" class="btn btn-outline-secondary fw-bold px-4 rounded-3" style="border: 1px solid var(--bs-border-color); color: var(--bs-body-color);">
+                ← Back to Queue
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white p-3 bg-gradient-patient h-100 shadow-sm">
+                <div class="card-body p-2">
+                    <small class="opacity-75 text-uppercase fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Patient ID</small>
+                    <h5 class="mt-2 mb-1 fw-bold" style="font-family: monospace; font-size: 18px;">{{ appointment.patient.patient_id }}</h5>
+                    <small class="d-block text-truncate fw-medium opacity-90">{{ appointment.patient }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white p-3 bg-gradient-token h-100 shadow-sm">
+                <div class="card-body p-2">
+                    <small class="opacity-75 text-uppercase fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Token Number</small>
+                    <h3 class="mt-2 fw-bold mb-0">#{{ appointment.daily_token }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white p-3 bg-gradient-status h-100 shadow-sm">
+                <div class="card-body p-2">
+                    <small class="opacity-75 text-uppercase fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Appointment Status</small>
+                    <h5 class="mt-2 fw-bold mb-0">{{ appointment.status }}</h5>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white p-3 bg-gradient-revisit h-100 shadow-sm">
+                <div class="card-body p-2">
+                    <small class="opacity-75 text-uppercase fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Revisit Eligibility</small>
+                    {% if appointment.patient.is_active_patient %}
+                        <h6 class="mt-2 mb-1 fw-bold">Eligible Active State</h6>
+                        <small class="opacity-90" style="font-family: monospace;">Till: {{ appointment.patient.revisit_valid_till|date:"d M Y" }}</small>
+                    {% else %}
+                        <h6 class="mt-2 fw-bold mb-0">Expired Matrix Status</h6>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-6">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Billing & Payments</h5>
+                            {% if appointment.billing_session_status == 'Completed' %}
+                                <span class="badge bg-success-subtle text-success workflow-badge">Completed</span>
+                            {% elif appointment.billing_session_status == 'Due Pending' %}
+                                <span class="badge bg-warning-subtle text-warning workflow-badge">Due Pending</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger workflow-badge">Active</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small">Manage live account sheets, session logs, collected receipts, outstanding patient dues, and final commercial billing workflows smoothly.</p>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'billing' appointment.id %}" class="btn btn-primary fw-bold rounded-3 px-4" style="background: #2563eb; border: none; font-size: 13px;">
+                            Open Billing Center →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <h5 class="fw-bold mb-3">Patient Medical History</h5>
+                        <p class="text-muted small">Review complete clinical archives, diagnostic tracks, historical visit timelines, doctor check-up notes, and long-term treatment records securely.</p>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'patient_history' appointment.patient.id %}" class="btn btn-outline-primary fw-bold rounded-3 px-4" style="font-size: 13px;">
+                            Open Patient History →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+        <div class="card premium-action-card h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+
+                <div>
+                    <h5 class="fw-bold mb-3">
+                        Prescription Printing
+                    </h5>
+
+                    <p class="text-muted small">
+                        Open and print the latest doctor prescription for this appointment.
+                    </p>
+                </div>
+
+                <div class="mt-4">
+
+                    <a
+                        href="{% url 'prescription_print' appointment.id %}"
+                        target="_blank"
+                        class="btn btn-success fw-bold rounded-3 px-4">
+
+                        Print Prescription →
+
+                    </a>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Follow-Up Management</h5>
+            </div>
+
+            <div class="card-body">
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <input type="hidden"
+                        name="form_type"
+                        value="followup">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Follow-Up Topic
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            name="followup_topic"
+                            value="{% if followup %}{{ followup.followup_topic }}{% endif %}"
+                            placeholder="Example: Review CBC Report">
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-bold">
+                            Follow-Up Conditions
+                        </label>
+
+                        <div class="border rounded p-3">
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Diabetes"
+                                    id="diabetes"
+
+                                    {% if 'Diabetes' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="diabetes">
+                                    Diabetes
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Hypertension"
+                                    id="hypertension"
+                                    
+                                    {% if 'Hypertension' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="hypertension">
+                                    Hypertension
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Kidney Disease"
+                                    id="kidney"
+                                    
+                                    {% if 'Kidney Disease' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="kidney">
+                                    Kidney Disease
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Liver Disease"
+                                    id="liver"
+                                    
+                                    {% if 'Liver Disease' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="liver">
+                                    Liver Disease
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Thyroid"
+                                    id="thyroid"
+                                    
+                                    {% if 'Thyroid' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="thyroid">
+                                    Thyroid
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Asthma"
+                                    id="asthma"
+                                    
+                                    {% if 'Asthma' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="asthma">
+                                    Asthma
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    name="conditions"
+                                    value="Heart Disease"
+                                    id="heart"
+                                    
+                                    {% if 'Heart Disease' in selected_conditions %}
+                                    checked
+                                    {% endif %}>
+
+                                <label class="form-check-label" for="heart">
+                                    Heart Disease
+                                </label>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                          Custom Condition
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            name="custom_condition"
+
+                            value="{% for c in followup.conditions.all %}{% if c.is_custom %}{{ c.condition_name }}{% endif %}{% endfor %}">
+
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Follow-Up Days
+                        </label>
+
+                        <input type="number"
+                            class="form-control"
+                            name="followup_days"
+                            value="{% if followup %}{{ followup.followup_days }}{% endif %}"
+                            required>
+                    </div>
+
+                    {% if followup %}
+                    <div class="alert alert-info">
+                        Due Date:
+                        <strong>
+                            {{ followup.followup_due_date }}
+                        </strong>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit"
+                            class="btn btn-primary w-100">
+                        Save Follow-Up
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">Prescriptions</h5>
+                    <p class="text-muted small mb-3">Upload or look up prescription data logs.</p>
+                    
+                    <form method="POST" enctype="multipart/form-data" id="prescriptionForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="file_type" value="Prescription">
+
+                        <select class="form-select file-viewer-select mb-3 text-primary fw-bold small">
+                            <option value="">📁 Select Document to View</option>
+                            {% for prescription in prescriptions %}
+                                <option value="{{ prescription.file.url }}">{{ prescription.file_type|default:prescription.file.name }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <input type="file" name="file" class="form-control mb-3 small fw-semibold text-secondary" accept="image/*,.pdf" capture="environment">
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="prescriptionBtn" class="btn btn-primary w-100 fw-bold rounded-3" style="background: #2563eb; border: none; font-size: 13px;">Upload File</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">Diagnostic Reports</h5>
+                    <p class="text-muted small mb-3">Manage laboratory diagnostic worksheets.</p>
+                    
+                    <form method="POST" enctype="multipart/form-data" id="reportForm">
+                        {% csrf_token %}
+                        <input type="text"
+                            name="file_type"
+                            class="form-control mb-3 small"
+                            placeholder="Enter Report name"
+                            required>
+
+                        <input type="file" name="file" class="form-control mb-3 small fw-semibold text-secondary" accept="image/*,.pdf" capture="environment">
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="reportBtn" class="btn btn-info text-white w-100 fw-bold rounded-3" style="font-size: 13px;">Upload File</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">Supporting Documents</h5>
+                    <p class="text-muted small mb-3">Store structural identity proofs or files.</p>
+                    
+                    <form method="POST" enctype="multipart/form-data" id="documentForm">
+                        {% csrf_token %}
+                        <input type="text"
+                            name="file_type"
+                            class="form-control mb-3 small"
+                            placeholder="Enter document name"
+                            required>
+
+                        <input type="file" name="file" class="form-control mb-3 small fw-semibold text-secondary" accept="image/*,.pdf" capture="environment">
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="documentBtn" class="btn btn-secondary w-100 fw-bold rounded-3" style="font-size: 13px;">Upload File</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4 col-md-6 mx-auto">
+            <div class="card premium-action-card h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">Patient Profile Photo</h5>
+                    <p class="text-muted small mb-3">Capture live profile image records safely.</p>
+                    
+                    <form method="POST" enctype="multipart/form-data" id="photoForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="file_type" value="Patient Photo">
+
+                        <select class="form-select file-viewer-select mb-3 text-success fw-bold small">
+                            <option value="">📷 Select Image to View</option>
+                            {% for photo in patient_photos %}
+                                <option value="{{ photo.file.url }}">{{ photo.file_type|default:photo.file.name }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <input type="file" name="file" class="form-control mb-3 small fw-semibold text-secondary" accept="image/*" capture="environment">
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="photoBtn" class="btn btn-success w-100 fw-bold rounded-3" style="font-size: 13px;">Save Photo</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card premium-action-card border border-primary-subtle bg-primary-subtle bg-opacity-10">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-primary-emphasis">Appointment Workflow Console</h5>
+                            <p class="text-muted small mb-0">Update live consultation room queuing status records.</p>
+                        </div>
+                        
+                        <div class="d-flex gap-2 flex-wrap">
+                            <form method="POST" id="pendingForm" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status_action" value="pending">
+                                <button type="button" id="pendingBtn" class="btn btn-warning text-dark fw-bold btn-action-node shadow-sm" style="font-size: 13px;">
+                                    ⏳ Mark Pending
+                                </button>
+                            </form>
+
+                            <form method="POST" id="completeForm" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status_action" value="complete">
+                                <button type="button" id="completeBtn" class="btn btn-success fw-bold btn-action-node shadow-sm" style="font-size: 13px;">
+                                    ✓ Mark Completed
+                                </button>
+                            </form>
+
+                            <form method="POST" id="cancelForm" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status_action" value="cancel">
+                                <button type="button" id="cancelBtn" class="btn btn-danger fw-bold btn-action-node shadow-sm" style="font-size: 13px;">
+                                    ✕ Cancel Appointment
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="pendingModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-warning mb-3">⏳</h2><h4 class="fw-bold">Queue Position Held</h4><p class="text-muted mb-0 small">Updating room balance states...</p></div></div></div>
+<div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-success mb-3">✓</h2><h4 class="fw-bold">Consultation Complete</h4><p class="text-muted mb-0 small">Finalizing active encounter log sheets...</p></div></div></div>
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-danger mb-3">✕</h2><h4 class="fw-bold">Appointment Voided</h4><p class="text-muted mb-0 small">Updating reception board layout matrix...</p></div></div></div>
+
+<div class="modal fade" id="prescriptionModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-primary mb-3">📄</h2><h4 class="fw-bold">Uploading Prescription</h4><p class="text-muted mb-0 small">Saving file to clinical logs...</p></div></div></div>
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-info mb-3">🔬</h2><h4 class="fw-bold">Uploading Diagnostic Report</h4><p class="text-muted mb-0 small">Archiving laboratory worksheet...</p></div></div></div>
+<div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-primary mb-3">🗂️</h2><h4 class="fw-bold">Uploading Supporting Document</h4><p class="text-muted mb-0 small">Securing identity and insurance records...</p></div></div></div>
+<div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center p-5"><h2 class="text-success mb-3">📷</h2><h4 class="fw-bold">Saving Profile Photo</h4><p class="text-muted mb-0 small">Updating master patient imagery...</p></div></div></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Simple triggering function: Show popup modal, then submit form natively after 1 second
+    const triggerModalAndSubmit = (buttonId, modalId, formId) => {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        
+        btn.addEventListener('click', function() {
+            const modalEl = document.getElementById(modalId);
+            const formEl = document.getElementById(formId);
+            if (!modalEl || !formEl) return;
+
+            // Make sure file forms actually have a selected file before popup fires
+            const fileInput = formEl.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files.length === 0) {
+                alert("Please select a file to upload first.");
+                return;
+            }
+
+            const modalInstance = new bootstrap.Modal(modalEl);
+            modalInstance.show();
+
+            setTimeout(() => {
+                formEl.submit();
+            }, 1000);
+        });
+    };
+
+    // Connect Workflow Modals
+    triggerModalAndSubmit('pendingBtn', 'pendingModal', 'pendingForm');
+    triggerModalAndSubmit('completeBtn', 'completeModal', 'completeForm');
+    triggerModalAndSubmit('cancelBtn', 'cancelModal', 'cancelForm');
+
+    // Connect Upload Modals
+    triggerModalAndSubmit('prescriptionBtn', 'prescriptionModal', 'prescriptionForm');
+    triggerModalAndSubmit('reportBtn', 'reportModal', 'reportForm');
+    triggerModalAndSubmit('documentBtn', 'documentModal', 'documentForm');
+    triggerModalAndSubmit('photoBtn', 'photoModal', 'photoForm');
+
+    // Dropdown Live Viewer Channel for remaining items
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('file-viewer-select')) {
+            const fileTargetUrl = e.target.value;
+            if (fileTargetUrl && fileTargetUrl.trim() !== "") {
+                window.open(fileTargetUrl, '_blank');
+                e.target.value = "";
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

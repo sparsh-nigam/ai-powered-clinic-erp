@@ -1,0 +1,732 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.db.models import Sum
+from django.db import transaction
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from decimal import Decimal, InvalidOperation
+
+from appointments.models import Appointment
+from doctors.models import Doctor
+from patients.models import Patient
+from .models import PatientFile, BillingTransaction, BillingSession, BillingItem
+
+def queue_management(request):
+    today = timezone.localdate()
+    
+    appointments = Appointment.objects.filter(
+        appointment_date=today
+    ).select_related('patient', 'doctor').order_by('daily_token')
+    
+    for appointment in appointments:
+        latest_session = BillingSession.objects.filter(
+            appointment=appointment
+        ).order_by('-id').first()
+        appointment.billing_session_status = latest_session.session_status if latest_session else 'Active'
+
+    context = {
+        'appointments': appointments,
+        'waiting_count': appointments.filter(status='Pending').count(),
+        'completed_count': appointments.filter(status='Completed').count(),
+        'cancelled_count': appointments.filter(status='Cancelled').count(),
+        'expired_count': appointments.filter(status='Expired').count(),
+        'paid_count': appointments.filter(payment_status='Paid').count(),
+        'pending_payment_count': appointments.filter(payment_status='Pending').count(),
+        'waived_count': appointments.filter(payment_status='Waived').count(),
+        'doctor_queue': [
+            {
+                'doctor': doc,
+                'pending_count': appointments.filter(doctor=doc, status='Pending').count()
+            } for doc in Doctor.objects.all()
+        ],
+    }
+    context['remaining_count'] = context['waiting_count']
+    return render(request, 'operations/queue_management.html', context)
+
+
+def action_center(request, id):
+    appointment = get_object_or_404(Appointment.objects.select_related('patient', 'doctor'), id=id)
+    
+    latest_session = BillingSession.objects.filter(appointment=appointment).order_by('-id').first()
+    appointment.billing_session_status = latest_session.session_status if latest_session else 'Active'
+    
+    if request.method == 'POST':
+        status_action = request.POST.get('status_action')
+        if status_action in ['pending', 'complete', 'cancel']:
+            status_map = {'pending': 'Pending', 'complete': 'Completed', 'cancel': 'Cancelled'}
+            appointment.status = status_map[status_action]
+            appointment.save()
+            return redirect('queue_management')
+            
+        uploaded_file = request.FILES.get('file')
+        file_type = request.POST.get('file_type')
+        if uploaded_file and file_type:
+            PatientFile.objects.create(
+                appointment=appointment,
+                file_type=file_type,
+                file=uploaded_file
+            )
+            return redirect('action_center', id=appointment.id)
+
+    files = PatientFile.objects.filter(appointment=appointment)
+    context = {
+        'appointment': appointment,
+        'prescriptions': files.filter(file_type='Prescription'),
+        'reports': files.filter(file_type='Report'),
+        'documents': files.filter(file_type='Document'),
+        'patient_photos': files.filter(file_type='Patient Photo'),
+    }
+    return render(request, 'operations/action_center.html', context)
+
+
+def billing(request, id=0):
+    appointment = None
+    patient = None
+    billing_session = None
+
+    if id != 0:
+        appointment = get_object_or_404(Appointment.objects.select_related('patient', 'doctor'), id=id)
+        patient = appointment.patient
+        billing_session, created = BillingSession.objects.get_or_create(
+            appointment=appointment,
+            defaults={
+                'session_number': f"BILL-{appointment.id}",
+                'patient': patient,
+                'visit_type': 'OPD',
+            }
+        )
+        if billing_session.session_status == 'Completed':
+            return redirect('final_invoice', session_id=billing_session.id)
+
+    patient_id = request.GET.get('patient_id')
+    patient_search = request.GET.get('patient_search')
+    new_session = request.GET.get('new_session')
+    session_id = request.GET.get('session')
+
+    if not appointment and (patient_id or patient_search):
+        try:
+            if patient_id:
+                patient = Patient.objects.get(id=patient_id)
+            elif patient_search:
+                patient = Patient.objects.get(patient_id=patient_search)
+        except Patient.DoesNotExist:
+            messages.error(request, f"No profile record found matching key reference target.")
+            return render(request, 'operations/billing.html', {'overall_billing_status': 'Pending'})
+
+        if new_session == 'true':
+            total_sessions = BillingSession.objects.filter(patient=patient).count()
+            billing_session = BillingSession.objects.create(
+                session_number=f"BILL-{patient.patient_id}-{total_sessions + 1}",
+                patient=patient,
+                visit_type='Manual',
+                session_status='Active'
+            )
+            return redirect(f'/operations/billing/0/?patient_search={patient.patient_id}&session={billing_session.id}')
+
+    if session_id and patient:
+        billing_session = get_object_or_404(
+            BillingSession.objects.filter(patient=patient),
+            id=session_id
+        )
+
+        # Restore appointment context for reopened appointment sessions
+        if billing_session.appointment and not appointment:
+            appointment = billing_session.appointment
+
+        if billing_session.session_status == 'Completed':
+            return redirect(f'/operations/final-invoice/{billing_session.id}/')
+
+    if request.method == 'POST' and patient:
+        close_session = request.POST.get('close_session')
+        if close_session and billing_session:
+            billing_session.session_status = 'Completed'
+            billing_session.save()
+            return JsonResponse({'success': True})
+
+        with transaction.atomic():
+            if billing_session and billing_session.session_status == 'Completed':
+                return JsonResponse({'success': False, 'message': 'Session is securely locked and archived.'})
+
+            form_type = request.POST.get('form_type')
+
+            if form_type == 'clear_due':
+                try:
+                    remaining_payment = Decimal(request.POST.get('repayment_amount', '0') or '0')
+                except InvalidOperation:
+                    return JsonResponse({'success': False, 'message': 'Invalid numerical text format submitted.'})
+
+                pending_transactions = BillingTransaction.objects.filter(
+                    billing_session=billing_session, pending_amount__gt=0
+                ).order_by('created_at')
+
+                for due_transaction in pending_transactions:
+                    if remaining_payment <= 0:
+                        break
+                    due_amount = due_transaction.pending_amount
+                    if remaining_payment >= due_amount:
+                        due_transaction.paid_amount += due_amount
+                        due_transaction.pending_amount = 0
+                        due_transaction.payment_status = 'Paid'
+                        remaining_payment -= due_amount
+                    else:
+                        due_transaction.paid_amount += remaining_payment
+                        due_transaction.pending_amount -= remaining_payment
+                        due_transaction.payment_status = 'Dues Pending'
+                        remaining_payment = 0
+                    due_transaction.save()
+
+                totals = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False).aggregate(
+                    b=Sum('total_amount'), p=Sum('paid_amount'), d=Sum('pending_amount')
+                )
+                billing_session.total_amount = totals['b'] or 0
+                billing_session.total_paid = totals['p'] or 0
+                billing_session.total_due = totals['d'] or 0
+                billing_session.session_status = 'Completed' if billing_session.total_due <= 0 else 'Due Pending'
+                 
+                payment_proof = request.FILES.get('payment_proof')
+
+                BillingTransaction.objects.create(
+                    billing_session=billing_session,
+                    patient=patient,
+                    appointment=appointment,
+                    transaction_type='Due Clearance',
+                    total_amount=remaining_payment,
+                    paid_amount=request.POST.get('repayment_amount', 0),
+                    pending_amount=0,
+                    payment_status='Paid',
+                    payment_mode=request.POST.get('payment_mode'),
+                    transaction_id=request.POST.get('transaction_id'),
+                    payment_proof=payment_proof,
+                    notes='Due cleared from patient history settlement.'
+                )
+                
+                
+                if billing_session.session_status == 'Completed':
+                    if appointment:
+                        appointment.payment_status = 'Paid'
+                        appointment.pending_amount = 0
+                        appointment.save()
+                        # Preserves original timing trace window by tracking from original encounter date
+                        patient.last_paid_consultation = appointment.appointment_date
+                        patient.save()
+
+                billing_session.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'total_bill': float(billing_session.total_amount),
+                    'total_paid': float(billing_session.total_paid),
+                    'total_pending': float(billing_session.total_due),
+                    'session_status': billing_session.session_status,
+                    'session_id': billing_session.id
+                })
+
+            finalize_session = request.POST.get('finalize_session')
+            if finalize_session == 'true' and billing_session:
+                totals = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False).aggregate(
+                    b=Sum('total_amount'), p=Sum('paid_amount'), d=Sum('pending_amount')
+                )
+                billing_session.total_amount = totals['b'] or 0
+                billing_session.total_paid = totals['p'] or 0
+                billing_session.total_due = totals['d'] or 0
+                billing_session.session_status = 'Due Pending' if billing_session.total_due > 0 else 'Completed'
+                billing_session.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'session_status': billing_session.session_status,
+                    'session_id': billing_session.id
+                })
+
+            try:
+                total_amount = Decimal(request.POST.get('total_amount', '0') or '0')
+                paid_amount = Decimal(request.POST.get('paid_amount', '0') or '0')
+            except InvalidOperation:
+                return JsonResponse({'success': False, 'message': 'Mathematical parsing alignment syntax fault.'})
+
+            payment_mode = request.POST.get('payment_mode')
+            transaction_id = request.POST.get('transaction_id')
+            
+            item_maps = {'medicine': 'medicine_name[]', 'procedure': 'procedure_name[]', 'emergency': 'emergency_name[]'}
+            item_names = request.POST.getlist(item_maps.get(form_type, '')) if form_type in item_maps else []
+
+            pending_amount = max(Decimal('0'), total_amount - paid_amount)
+            if pending_amount <= 0:
+                payment_status = 'Paid'
+            elif paid_amount <= 0:
+                payment_status = 'Pending'
+            else:
+                payment_status = 'Dues Pending'
+
+            t_type = form_type.capitalize() if form_type else 'Unknown'
+            billing_transaction, _ = BillingTransaction.objects.update_or_create(
+                billing_session=billing_session, transaction_type=t_type, is_void=False,
+                defaults={
+                    'patient': patient, 'appointment': appointment, 'total_amount': total_amount,
+                    'paid_amount': paid_amount, 'pending_amount': pending_amount, 'payment_status': payment_status,
+                    'payment_mode': payment_mode, 'transaction_id': transaction_id, 'notes': ', '.join(item_names)
+                }
+            )
+
+            if request.FILES.get('payment_proof'):
+                billing_transaction.payment_proof = request.FILES.get('payment_proof')
+                billing_transaction.save()
+
+            if form_type in ['medicine', 'procedure', 'emergency']:
+                billing_transaction.items.all().delete()
+                qtys = request.POST.getlist(f'{form_type}_qty[]')
+                prices = request.POST.getlist(f'{form_type}_price[]')
+                
+                for idx, name in enumerate(item_names):
+                    if name.strip():
+                        try:
+                            q = int(qtys[idx]) if idx < len(qtys) else 1
+                            p = Decimal(prices[idx]) if idx < len(prices) else Decimal('0')
+                        except (ValueError, InvalidOperation):
+                            q, p = 1, Decimal('0')
+                        
+                        if form_type != 'medicine' or p > 0:
+                            BillingItem.objects.create(
+                                billing_transaction=billing_transaction, item_name=name,
+                                quantity=q, price=p, total_price=q * p
+                            )
+
+            if appointment and form_type == 'consultation':
+                appointment.total_amount, appointment.paid_amount = total_amount, paid_amount
+                appointment.pending_amount, appointment.payment_status = pending_amount, payment_status
+                if payment_status == 'Paid':
+                    patient.last_paid_consultation = timezone.localdate()
+                    patient.save()
+                appointment.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                transactions_query = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False)
+                return JsonResponse({
+                    'success': True,
+                    'total_bill': float(transactions_query.aggregate(s=Sum('total_amount'))['s'] or 0),
+                    'total_paid': float(transactions_query.aggregate(s=Sum('paid_amount'))['s'] or 0),
+                    'total_pending': float(transactions_query.aggregate(s=Sum('pending_amount'))['s'] or 0),
+                    'session_status': billing_session.session_status,
+                    'session_id': billing_session.id
+                })
+
+    transactions = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False).order_by('-created_at') if billing_session else BillingTransaction.objects.none()
+    
+    sums = transactions.aggregate(b=Sum('total_amount'), p=Sum('paid_amount'), d=Sum('pending_amount'))
+    total_bill, total_paid, total_pending = sums['b'] or 0, sums['p'] or 0, sums['d'] or 0
+
+    if total_bill == 0:
+        overall_billing_status = 'No Active Session'
+    elif total_pending <= 0 and total_bill > 0:
+        overall_billing_status = 'Paid'
+    elif total_paid <= 0:
+        overall_billing_status = 'Pending'
+    else:
+        overall_billing_status = 'Dues Pending'
+
+    med_t = transactions.filter(transaction_type='Medicine').first()
+    proc_t = transactions.filter(transaction_type='Procedure').first()
+    emerg_t = transactions.filter(transaction_type='Emergency').first()
+
+    context = {
+        'appointment': appointment, 'patient': patient, 'billing_session': billing_session,
+        'transactions': transactions, 'total_bill': total_bill, 'total_paid': total_paid, 'total_pending': total_pending,
+        'overall_billing_status': overall_billing_status, 'billing_sessions': BillingSession.objects.filter(patient=patient).order_by('-created_at') if patient else [],
+        'consultation_transaction': transactions.filter(transaction_type='Consultation').first(),
+        'medicine_items_data': med_t.items.all() if med_t else [],
+        'procedure_items_data': proc_t.items.all() if proc_t else [],
+        'emergency_items_data': emerg_t.items.all() if emerg_t else [],
+        'edit_locked': billing_session.session_status in ['Completed', 'Due Pending'] if billing_session else False,
+        'allow_due_clearance': billing_session.session_status == 'Due Pending' if billing_session else False,
+    }
+    return render(request, 'operations/billing.html', context)
+
+
+def delete_billing_transaction(request, id):
+    billing_transaction = get_object_or_404(BillingTransaction, id=id)
+    billing_transaction.is_void = True
+    billing_transaction.save()
+    return JsonResponse({'success': True})
+
+
+def billing_history(request, patient_id):
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    billing_sessions = BillingSession.objects.filter(patient=patient).order_by('-created_at')
+    
+    context = {
+        'patient': patient,
+        'billing_sessions': billing_sessions,
+        'total_sessions': billing_sessions.count(),
+        'total_revenue': billing_sessions.aggregate(s=Sum('total_paid'))['s'] or 0,
+        'total_due': billing_sessions.aggregate(s=Sum('total_due'))['s'] or 0,
+        'completed_sessions': billing_sessions.filter(session_status='Completed').count(),
+    }
+    return render(request, 'operations/billing-history.html', context)
+
+
+def final_invoice(request, session_id):
+    billing_session = get_object_or_404(BillingSession.objects.select_related('patient'), id=session_id)
+    transactions = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False)
+    
+    sums = transactions.aggregate(b=Sum('total_amount'), p=Sum('paid_amount'), d=Sum('pending_amount'))
+    context = {
+        'billing_session': billing_session,
+        'patient': billing_session.patient,
+        'transactions': transactions,
+        'total_bill': sums['b'] or 0,
+        'total_paid': sums['p'] or 0,
+        'total_pending': sums['d'] or 0,
+    }
+    return render(request, 'operations/final_invoice.html', context)
+
+
+def download_invoice_pdf(request, session_id):
+    billing_session = get_object_or_404(BillingSession.objects.select_related('patient'), id=session_id)
+    transactions = BillingTransaction.objects.filter(billing_session=billing_session, is_void=False)
+    
+    sums = transactions.aggregate(b=Sum('total_amount'), p=Sum('paid_amount'), d=Sum('pending_amount'))
+    context = {
+        'billing_session': billing_session,
+        'patient': billing_session.patient,
+        'transactions': transactions,
+        'total_bill': sums['b'] or 0,
+        'total_paid': sums['p'] or 0,
+        'total_pending': sums['d'] or 0,
+    }
+    
+    html = get_template('operations/final_invoice.html').render(context)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Invoice-{billing_session.session_number}.pdf"'
+    
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    return response if not pisa_status.err else HttpResponse('PDF generation failed', status=500)from django.shortcuts import render,redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages 
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from patients.models import Patient
+# from appointments.forms import AppointmentForm
+from appointments.models import Appointment
+from doctors.models import Doctor
+from django.utils import timezone
+from django.db.models import Q
+from django.http import JsonResponse
+
+# Create your views here.
+def login_view(request):
+    
+    if request.method == "POST":
+        username=request.POST.get('username')
+        password=request.POST.get('password')
+        
+        user=authenticate(
+            request,
+            username=username,
+            password=password
+        )
+        
+        if user is not None:
+            login(request,user)
+            if user.role=='SUPER_OWNER':
+                return redirect('/accounts/dashboard/')
+            elif user.role=='STAFF':
+                return redirect('/accounts/dashboard/')
+            elif user.role=='DOCTOR':
+                return redirect('/accounts/dashboard/')
+        
+        else:
+            messages.error(request,'Invalid username or password')
+    return render(request, 'accounts/login.html')
+@login_required(login_url='/accounts/login/')
+def dashboard_view(request):
+    return render(request,'dashboard/dashboard.html')
+
+# Creating render/links for all dashboard templates
+
+def analytics(request):
+    return render(request,'dashboard/analytics.html')
+############################################################
+
+
+
+######################################
+    
+
+##############################################################
+
+
+def consultation_notes(request):
+    return render(request,'dashboard/consultation_notes.html')
+
+def consultations(request):
+    return render(request,'dashboard/consultations.html')
+
+def doctors(request):
+    return render(request,'dashboard/doctors.html')
+
+def followups(request):
+    return render(request,'dashboard/followups.html')
+
+def invoices(request):
+    return render(request,'dashboard/invoices.html')
+
+def overview(request):
+    return render(request,'dashboard/overview.html')
+
+
+def payments(request):
+    return render(request,'dashboard/payments.html')
+
+def permissions(request):
+    return render(request,'dashboard/permissions.html')
+
+def prescriptions(request):
+    return render(request,'dashboard/prescriptions.html')
+
+
+
+def reports(request):
+    return render(request,'dashboard/reports.html')
+
+def schedules(request):
+    return render(request,'dashboard/schedules.html')
+
+def staff_management(request):
+    return render(request,'dashboard/staff_management.html')
+
+def user_roles(request):
+    return render(request,'dashboard/user_roles.html')
+
+
+def logout_view(request):
+
+    logout(request)
+
+    return redirect('login')from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
+from django.utils import timezone
+from appointments.models import Appointment
+from operations.models import BillingSession, BillingTransaction  # IMPORTED: Needed to track complete billing session states
+from operations.models import PatientFile
+from .models import Patient
+from django.contrib import messages
+
+def patient_history(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+
+    if request.method == 'POST':
+
+        uploaded_file = request.FILES.get('file')
+        file_type = request.POST.get('file_type')
+
+        if uploaded_file and file_type:
+
+            latest_appointment = Appointment.objects.filter(
+                patient=patient
+            ).order_by('-id').first()
+
+            PatientFile.objects.create(
+                appointment=latest_appointment,
+                file_type=file_type,
+                file=uploaded_file
+            )
+
+            messages.success(
+                request,
+                'Document uploaded successfully.'
+            )
+
+            return redirect(
+                'patient_history',
+                pk=patient.pk
+            )
+    appointments = Appointment.objects.filter(patient=patient).order_by('-id')
+    billing_sessions = BillingSession.objects.filter(patient=patient).order_by('-id')
+    patient_files = PatientFile.objects.filter(
+        appointment__patient=patient
+    ).order_by('-id')
+    payment_proofs = BillingTransaction.objects.filter(
+        patient=patient,
+        payment_proof__isnull=False
+    ).exclude(
+        payment_proof=''
+    ).order_by('-id')
+    
+    appointment_payment_proofs = Appointment.objects.filter(
+        patient=patient,
+        payment_proof__isnull=False
+    ).exclude(
+        payment_proof=''
+    ).order_by('-id')
+    context = {
+        'patient': patient,
+        'appointments': appointments,
+        'billing_sessions': billing_sessions,
+        'prescriptions': patient_files.filter(file_type='Prescription'),
+        'documents': patient_files.exclude(file_type__in=['Prescription', 'Patient Photo']),
+        'reports': patient_files.filter(file_type='Report'),
+        'payment_proofs': payment_proofs,
+        'appointment_payment_proofs': appointment_payment_proofs,
+        'patient_photos': patient_files.filter(file_type='Patient Photo'),
+        'profile_photo': patient_files.filter(file_type='Patient Photo').first(),
+    }
+    
+    return render(request, 'patients/patient_history.html', context)
+
+def patients(request):
+    from appointments.models import Appointment
+
+    today = timezone.localdate()
+    patients_data = Patient.objects.all().order_by('-id')
+
+    search = request.GET.get('search')
+    gender = request.GET.get('gender')
+    status = request.GET.get('status')
+
+    # Apply search filters
+    if search:
+        patients_data = patients_data.filter(
+            Q(patient_id__icontains=search)
+            |
+            Q(name__icontains=search)
+            |
+            Q(phone__icontains=search)
+        )
+
+    if gender:
+        patients_data = patients_data.filter(
+            gender=gender
+        )
+
+    total_patients = Patient.objects.count()
+    
+    today_patients = Appointment.objects.filter(
+        created_at__date=today
+    ).values(
+        'patient'
+    ).distinct().count()
+
+    active_patients = 0
+    expired_patients = 0
+
+    pending_count = 0
+    completed_count = 0
+    cancelled_count = 0
+    expired_count = 0
+    no_appointment_count = 0
+
+    # Loop through patients to dynamically bind metrics and live session tracking keys
+    for patient in patients_data:
+        
+        patient.registered_today = Appointment.objects.filter(
+            patient=patient,
+            created_at__date=today
+        ).exists()
+
+        latest_appointment = Appointment.objects.filter(
+            patient=patient
+        ).order_by('-id').first()
+
+        # FIX: Fetch the absolute latest full billing session record for this specific patient
+        latest_session = BillingSession.objects.filter(patient=patient).order_by('-id').first()
+        if latest_session:
+            # Bind the true session string ('Active', 'Completed', etc.) straight onto the row context
+            patient.latest_session_status = latest_session.session_status
+        else:
+            patient.latest_session_status = 'No Session'
+
+        if latest_appointment:
+            patient.latest_appointment_status = (
+                latest_appointment.status
+            )
+            patient.latest_payment_status = (
+                latest_appointment.payment_status
+            )
+        else:
+            patient.latest_appointment_status = (
+                'No Appointment'
+            )
+            patient.latest_payment_status = '-'
+
+        if patient.is_active_patient:
+            active_patients += 1
+        else:
+            expired_patients += 1
+
+        # Incremental math loops for your sidebar sliding analytics engine counters
+        if patient.latest_appointment_status == 'Pending':
+            pending_count += 1
+        elif patient.latest_appointment_status == 'Completed':
+            completed_count += 1
+        elif patient.latest_appointment_status == 'Cancelled':
+            cancelled_count += 1
+        elif patient.latest_appointment_status == 'Expired':
+            expired_count += 1
+        elif patient.latest_appointment_status == 'No Appointment':
+            no_appointment_count += 1
+
+    # Custom post-loop list filtering for your top dashboard card clicks
+    if status == 'Active':
+        patients_data = [
+            patient for patient in patients_data
+            if patient.is_active_patient
+        ]
+
+    elif status == 'Inactive':
+        patients_data = [
+            patient for patient in patients_data
+            if not patient.is_active_patient
+        ]
+
+    context = {
+        'patients_data': patients_data,
+        'total_patients': total_patients,
+        'today_patients': today_patients,
+        'active_patients': active_patients,
+        'inactive_patients': expired_patients,
+        'pending_count': pending_count,
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'expired_count': expired_count,
+        'no_appointment_count': no_appointment_count,
+    }
+
+    return render(
+        request,
+        'patients/patients.html',
+        context
+    )
+    
+def edit_patient(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+
+    if request.method == 'POST':
+        # Retrieve form data
+        patient.name = request.POST.get('name')
+        patient.phone = request.POST.get('phone')
+        patient.age = request.POST.get('age')
+        patient.disease = request.POST.get('disease')
+        patient.blood_group = request.POST.get('blood_group')
+        patient.allergies = request.POST.get('allergies')
+        patient.chronic_conditions = request.POST.get('chronic_conditions')
+        patient.address = request.POST.get('address')
+        patient.height = request.POST.get('height') or None
+        patient.weight = request.POST.get('weight') or None
+        
+        # Save to database
+        patient.save()
+        messages.success(request, 'Patient profile updated successfully.')
+        
+        # Redirect back to the history page
+        return redirect('patient_history', pk=patient.pk)
+
+    context = {
+        'patient': patient,
+        'blood_groups': [bg[0] for bg in Patient.BloodGroup_Choices],
+    }
+    return render(request, 'patients/edit_patient.html', context)from django.shortcuts import render
+
+def doctor_dashboard(request):
+    return render(request, 'doctor.html')

@@ -1,0 +1,1626 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid analytics-dashboard">
+
+    <div class="analytics-header mb-4">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+
+            <div>
+                <h2 class="analytics-title">
+                    Project Clinic Analytics
+                </h2>
+
+                <p class="analytics-subtitle">
+                    Business Performance Overview
+                </p>
+            </div>
+
+            <div class="analytics-filters">
+
+
+                <button class="btn btn-outline-primary global-filter"
+                        data-period="yesterday">
+                    Yesterday
+                </button>
+
+                <button class="btn {% if selected_period == 'today' %}btn-primary active{% else %}btn-outline-primary{% endif %} global-filter"
+                        data-period="today">
+                    Today
+                </button>
+
+                <button class="btn {% if selected_period == 'week' %}btn-primary active{% else %}btn-outline-primary{% endif %} global-filter"
+                        data-period="week">
+                    Last 7 Days
+                </button>
+
+                <button class="btn btn-outline-primary global-filter"
+                        data-period="month">
+                    This Month
+                </button>
+
+                <button class="btn btn-outline-primary global-filter"
+                        data-period="last_month">
+                    Last Month
+                </button>
+
+                <button class="btn btn-outline-primary global-filter"
+                        data-period="year">
+                    This Year
+                </button>
+
+                <input type="date"
+                    id="startDate"
+                    class="form-control d-inline-block"
+                    style="width:170px;">
+
+                <input type="date"
+                    id="endDate"
+                    class="form-control d-inline-block"
+                    style="width:170px;">
+
+                <button class="btn btn-success"
+                        id="applyCustomRange">
+                    Apply
+                </button>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="analytics-card revenue-card">
+
+                <div class="card-icon">
+                    💰
+                </div>
+
+                <div class="card-value">
+                    ₹{{ today_revenue }}
+                </div>
+
+                <div class="card-label">
+                    Revenue Today
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="analytics-card patient-card">
+
+                <div class="card-icon">
+                    👨‍⚕️
+                </div>
+
+                <div class="card-value">
+                    {{ total_patients }}
+                </div>
+
+                <div class="card-label">
+                    Total Patients
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="analytics-card due-card">
+
+                <div class="card-icon">
+                    📄
+                </div>
+
+                <div class="card-value">
+                    ₹{{ total_due_amount }}
+                </div>
+
+                <div class="card-label">
+                    Outstanding Due
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="analytics-card retention-card">
+
+                <div class="card-icon">
+                    🔄
+                </div>
+
+                <div class="card-value">
+                    {{ retention_rate }}%
+                </div>
+
+                <div class="card-label">
+                    Retention Rate
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="analytics-panel mb-4">
+
+        <div class="panel-header">
+
+            <h4>
+                Revenue Command Center
+            </h4>
+
+            <div>
+
+                <span class="badge bg-success">
+                    Monthly ₹{{ monthly_revenue }}
+                </span>
+
+                <span class="badge bg-primary">
+                    Yearly ₹{{ yearly_revenue }}
+                </span>
+
+                <span class="badge bg-dark">
+                    Lifetime ₹{{ lifetime_revenue }}
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="chart-container">
+
+            <canvas id="revenueChart"></canvas>
+
+            
+
+        </div>
+
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-lg-6">
+
+            <div class="analytics-panel">
+
+                <div class="panel-header">
+
+                    <div class="d-flex justify-content-between align-items-center w-100">
+
+                        <h4>
+                            Patient Growth
+                        </h4>
+
+                        <div>
+
+                            <button
+                                class="btn btn-sm btn-primary patient-filter active"
+                                data-type="daily">
+                                Daily
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-outline-primary patient-filter"
+                                data-type="monthly">
+                                Monthly
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-outline-primary patient-filter"
+                                data-type="yearly">
+                                Yearly
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="chart-container">
+
+                    <canvas id="patientGrowthChart"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+
+            <div class="analytics-panel">
+
+                <div class="panel-header">
+
+                    <h4>
+                        Patient Acquisition
+                    </h4>
+
+                </div>
+
+                <div class="patient-metrics">
+
+                    <div class="metric-box">
+
+                        <span>Today</span>
+
+                        <h3>
+                            {{ new_patients_today }}
+                        </h3>
+
+                    </div>
+
+                    <div class="metric-box">
+
+                        <span>This Week</span>
+
+                        <h3>
+                            {{ new_patients_week }}
+                        </h3>
+
+                    </div>
+
+                    <div class="metric-box">
+
+                        <span>This Month</span>
+
+                        <h3>
+                            {{ new_patients_month }}
+                        </h3>
+
+                    </div>
+
+                    <div class="metric-box">
+
+                        <span>This Year</span>
+
+                        <h3>
+                            {{ new_patients_year }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+<div class="analytics-panel mb-4">
+
+    <div class="panel-header">
+
+        <h4>
+            Doctor Performance Center
+        </h4>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-4">
+
+            <div class="doctor-highlight-card">
+
+                <small>Most Busy Doctor</small>
+
+                <h4>
+                    {{ most_busy_doctor }}
+                </h4>
+
+                <p>
+                    {{ most_busy_doctor.appointment_count }}
+                    Appointments
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="doctor-highlight-card">
+
+                <small>Most Busy This Month</small>
+
+                <h4>
+                    {{ most_busy_doctor_month }}
+                </h4>
+
+                <p>
+                    {{ most_busy_doctor_month.month_appointments }}
+                    Appointments
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="doctor-highlight-card">
+
+                <small>Highest Revenue Doctor</small>
+
+                <h4>
+                    {{ most_revenue_doctor.appointment__doctor__name }}
+                </h4>
+
+                <p>
+                    ₹{{ most_revenue_doctor.revenue }}
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive mt-4">
+
+        <table class="table table-hover doctor-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>#</th>
+
+                    <th>Doctor</th>
+
+                    <th>Revenue</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for doctor in top_revenue_doctors %}
+
+                <tr>
+
+                    <td>
+                        {{ forloop.counter }}
+                    </td>
+
+                    <td>
+                        {{ doctor.appointment__doctor__name }}
+                    </td>
+
+                    <td>
+                        ₹{{ doctor.revenue }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+        <div class="mt-4">
+
+            <canvas id="doctorRevenueChart"></canvas>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-4 mb-4">
+
+    <div class="col-lg-6">
+
+        <div class="analytics-panel">
+
+            <div class="panel-header">
+
+                <h4>
+                    Payment Distribution
+                </h4>
+
+            </div>
+
+            <div class="chart-container">
+
+                <canvas id="paymentChart"></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-6">
+
+        <div class="analytics-panel">
+
+            <div class="panel-header">
+
+                <h4>
+                    Financial Health
+                </h4>
+
+            </div>
+
+            <div class="finance-grid">
+
+                <div class="metric-box">
+
+                    <span>
+                        Due Amount
+                    </span>
+
+                    <h3>
+                        ₹{{ total_due_amount }}
+                    </h3>
+
+                </div>
+
+                <div class="metric-box">
+
+                    <span>
+                        Due Sessions
+                    </span>
+
+                    <h3>
+                        {{ active_due_sessions }}
+                    </h3>
+
+                </div>
+
+                <div class="metric-box">
+
+                    <span>
+                        Unpaid Transactions
+                    </span>
+
+                    <h3>
+                        {{ unpaid_transactions }}
+                    </h3>
+
+                </div>
+
+                <div class="metric-box">
+
+                    <span>
+                        Waiver Rate
+                    </span>
+
+                    <h3>
+                        {{ waiver_percentage }}%
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="row mt-4">
+
+        <div class="col-md-6">
+
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Chronic Condition Distribution
+                    </h5>
+                </div>
+
+                <div class="card-body">
+
+                    <canvas
+                        id="conditionChart"
+                        height="250">
+                    </canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-6">
+
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Condition Summary
+                    </h5>
+                </div>
+
+                <div class="card-body">
+
+                    <ul class="list-group">
+
+                        {% for item in condition_stats %}
+
+                        <li class="list-group-item d-flex justify-content-between">
+
+                            <span>
+                                {{ item.condition }}
+                            </span>
+
+                            <strong>
+                                {{ item.total }}
+                            </strong>
+
+                        </li>
+
+                        {% endfor %}
+
+                        </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+<div class="analytics-panel mb-4">
+
+    <div class="panel-header">
+
+        <h4>
+            Follow-Up Visit Intelligence
+        </h4>
+
+    </div>
+
+    <div class="chart-container">
+
+        <canvas
+            id="followupChart"
+            height="120">
+        </canvas>
+
+    </div>
+
+</div>
+<div class="row g-4 mb-4">
+
+    <div class="col-lg-6">
+
+        <div class="analytics-panel">
+
+            <div class="panel-header">
+
+                <h4>
+                    Gender Distribution
+                </h4>
+
+            </div>
+
+            <div class="chart-container">
+
+                <canvas id="genderChart"></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-6">
+
+        <div class="analytics-panel">
+
+            <div class="panel-header">
+
+                <h4>
+                    Age Distribution
+                </h4>
+
+            </div>
+
+            <div class="chart-container">
+
+                <canvas id="ageChart"></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="analytics-panel mb-4">
+
+    <div class="panel-header">
+
+        <h4>
+            Patient Retention Center
+        </h4>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-4">
+
+            <div class="metric-box">
+
+                <span>
+                    Returning Patients
+                </span>
+
+                <h3>
+                    {{ revisit_patients }}
+                </h3>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="metric-box">
+
+                <span>
+                    Revisit Visits
+                </span>
+
+                <h3>
+                    {{ revisit_visits }}
+                </h3>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="metric-box">
+
+                <span>
+                    Retention Rate
+                </span>
+
+                <h3>
+                    {{ retention_rate }}%
+                </h3>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="analytics-panel">
+
+    <div class="panel-header">
+
+        <h4>
+            Historical Records
+        </h4>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-6">
+
+            <div class="record-card">
+
+                <h5>
+                    Best Revenue Day
+                </h5>
+
+                <p>
+                    {{ highest_revenue_day.day }}
+                </p>
+
+                <h4>
+                    ₹{{ highest_revenue_day.revenue }}
+                </h4>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+
+            <div class="record-card">
+
+                <h5>
+                    Best Appointment Day
+                </h5>
+
+                <p>
+                    {{ highest_appointment_day.appointment_date }}
+                </p>
+
+                <h4>
+                    {{ highest_appointment_day.total }}
+                </h4>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<style>
+
+.analytics-dashboard{
+    padding:20px;
+}
+
+.analytics-header{
+    padding:25px;
+    border-radius:24px;
+    background:linear-gradient(
+        135deg,
+        #1e3c72,
+        #2a5298
+    );
+    color:white;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+.analytics-title{
+    font-size:2rem;
+    font-weight:700;
+    margin-bottom:5px;
+}
+
+.analytics-subtitle{
+    opacity:.8;
+    margin:0;
+}
+
+.period-btn{
+    border-radius:12px;
+    margin-left:6px;
+}
+
+.analytics-card{
+    position:relative;
+    overflow:hidden;
+    padding:28px;
+    border-radius:24px;
+    background:white;
+    transition:.35s;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    height:100%;
+}
+
+.analytics-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 20px 45px rgba(0,0,0,.15);
+}
+
+.card-icon{
+    font-size:2rem;
+    margin-bottom:15px;
+}
+
+.card-value{
+    font-size:2rem;
+    font-weight:700;
+    margin-bottom:5px;
+}
+
+.card-label{
+    color:#6c757d;
+    font-size:.9rem;
+}
+
+.revenue-card{
+    border-left:6px solid #198754;
+}
+
+.patient-card{
+    border-left:6px solid #0d6efd;
+}
+
+.due-card{
+    border-left:6px solid #dc3545;
+}
+
+.retention-card{
+    border-left:6px solid #6f42c1;
+}
+
+.analytics-panel{
+    background:white;
+    border-radius:24px;
+    padding:25px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+.panel-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+    flex-wrap:wrap;
+}
+
+.chart-container{
+    position:relative;
+    height:420px;
+    padding:10px;
+}
+
+.patient-metrics{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+.metric-box{
+    background:linear-gradient(
+        135deg,
+        #f8f9fa,
+        #ffffff
+    );
+    border-radius:18px;
+    padding:20px;
+    text-align:center;
+    box-shadow:0 4px 15px rgba(0,0,0,.05);
+}
+
+.metric-box h3{
+    margin-top:10px;
+    font-weight:700;
+}
+
+.doctor-highlight-card{
+    background:linear-gradient(
+        135deg,
+        #ffffff,
+        #f8f9fa
+    );
+    border-radius:20px;
+    padding:25px;
+    text-align:center;
+    height:100%;
+}
+
+.record-card{
+    background:linear-gradient(
+        135deg,
+        #f8f9fa,
+        #ffffff
+    );
+    border-radius:18px;
+    padding:25px;
+    text-align:center;
+}
+
+.finance-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+@keyframes fadeInUp{
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+.analytics-card,
+.analytics-panel,
+.metric-box,
+.record-card,
+.doctor-highlight-card{
+    animation:fadeInUp .6s ease;
+}
+
+/* ==========================================================================
+   DYNAMIC DARK MODE OVERRIDES (Appended for global ERP compatibility)
+   ========================================================================== */
+.dark-mode .analytics-card, .dark .analytics-card, [data-theme="dark"] .analytics-card, [data-bs-theme="dark"] .analytics-card,
+.dark-mode .analytics-panel, .dark .analytics-panel, [data-theme="dark"] .analytics-panel, [data-bs-theme="dark"] .analytics-panel {
+    background: #1e2433 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,.35) !important;
+    color: #f8fafc !important;
+}
+
+.dark-mode .analytics-panel h4, .dark .analytics-panel h4, [data-theme="dark"] .analytics-panel h4, [data-bs-theme="dark"] .analytics-panel h4,
+.dark-mode .card-value, .dark .card-value, [data-theme="dark"] .card-value, [data-bs-theme="dark"] .card-value {
+    color: #ffffff !important;
+}
+
+.dark-mode .card-label, .dark .card-label, [data-theme="dark"] .card-label, [data-bs-theme="dark"] .card-label {
+    color: #94a3b8 !important;
+}
+
+.dark-mode .metric-box, .dark .metric-box, [data-theme="dark"] .metric-box, [data-bs-theme="dark"] .metric-box,
+.dark-mode .record-card, .dark .record-card, [data-theme="dark"] .record-card, [data-bs-theme="dark"] .record-card,
+.dark-mode .doctor-highlight-card, .dark .doctor-highlight-card, [data-theme="dark"] .doctor-highlight-card, [data-bs-theme="dark"] .doctor-highlight-card {
+    background: linear-gradient(135deg, #262e3f, #1e2433) !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,.25) !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-mode .metric-box h3, .dark .metric-box h3, [data-theme="dark"] .metric-box h3, [data-bs-theme="dark"] .metric-box h3,
+.dark-mode .record-card h4, .dark .record-card h4, [data-theme="dark"] .record-card h4, [data-bs-theme="dark"] .record-card h4,
+.dark-mode .doctor-highlight-card h4, .dark .doctor-highlight-card h4, [data-theme="dark"] .doctor-highlight-card h4, [data-bs-theme="dark"] .doctor-highlight-card h4 {
+    color: #ffffff !important;
+}
+
+.dark-mode .doctor-table, .dark .doctor-table, [data-theme="dark"] .doctor-table, [data-bs-theme="dark"] .doctor-table {
+    color: #e2e8f0 !important;
+}
+
+.dark-mode .doctor-table th, .dark .doctor-table th, [data-theme="dark"] .doctor-table th, [data-bs-theme="dark"] .doctor-table th {
+    border-bottom-color: #334155 !important;
+}
+
+.dark-mode .doctor-table td, .dark .doctor-table td, [data-theme="dark"] .doctor-table td, [data-bs-theme="dark"] .doctor-table td {
+    border-bottom-color: #262e3f !important;
+}
+
+.dark-mode .badge.bg-dark, .dark .badge.bg-dark, [data-theme="dark"] .badge.bg-dark, [data-bs-theme="dark"] .badge.bg-dark {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+const dailyRevenue =
+JSON.parse(
+    '{{ daily_revenue_chart|escapejs }}'
+);
+
+const monthlyRevenue =
+JSON.parse(
+    '{{ monthly_revenue_chart|escapejs }}'
+);
+
+const yearlyRevenue =
+JSON.parse(
+    '{{ yearly_revenue_chart|escapejs }}'
+);
+
+const ctx =
+document
+.getElementById('revenueChart')
+.getContext('2d');
+
+
+
+let revenueChart =
+new Chart(ctx, {
+
+    type:'line',
+
+    data:{
+        labels:
+            dailyRevenue.map(
+                item => item.label
+            ),
+
+        datasets:[{
+
+            label:'Revenue',
+
+            data:
+                dailyRevenue.map(
+                    item => item.value
+                ),
+
+            borderWidth:3,
+
+            tension:0.45,
+
+            fill:true,
+
+            pointRadius:4,
+
+            pointHoverRadius:8,
+
+            backgroundColor:
+                'rgba(13,110,253,0.15)',
+
+            borderColor:
+                '#0d6efd'
+        }]
+    }
+});
+
+document
+.querySelectorAll('.revenue-filter')
+.forEach(button => {
+
+    button.addEventListener(
+        'click',
+        function(){
+
+            document
+            .querySelectorAll('.revenue-filter')
+            .forEach(btn => {
+
+                btn.classList.remove(
+                    'active',
+                    'btn-primary'
+                );
+
+                btn.classList.add(
+                    'btn-outline-primary'
+                );
+
+            });
+
+            this.classList.remove(
+                'btn-outline-primary'
+            );
+
+            this.classList.add(
+                'btn-primary',
+                'active'
+            );
+
+            let source = dailyRevenue;
+
+            if(
+                this.dataset.type === 'monthly'
+            ){
+                source = monthlyRevenue;
+            }
+
+            if(
+                this.dataset.type === 'yearly'
+            ){
+                source = yearlyRevenue;
+            }
+
+            revenueChart.data.labels =
+                source.map(
+                    item => item.label
+                );
+
+            revenueChart.data.datasets[0].data =
+                source.map(
+                    item => item.value
+                );
+
+            revenueChart.update();
+
+        }
+    );
+
+});
+
+</script>
+<script>
+
+const patientDaily =
+JSON.parse(
+    '{{ patient_growth_chart|escapejs }}'
+);
+
+const patientCtx =
+document
+.getElementById('patientGrowthChart')
+.getContext('2d');
+
+const patientMonthly =
+JSON.parse(
+    '{{ monthly_patient_chart|escapejs }}'
+);
+
+const patientYearly =
+JSON.parse(
+    '{{ yearly_patient_chart|escapejs }}'
+);
+
+let patientChart =
+new Chart(patientCtx, {
+
+    type:'bar',
+
+    data:{
+
+        labels:
+            patientDaily.map(
+                item => item.label
+            ),
+
+        datasets:[{
+
+            label:'Patients',
+
+            data:
+                patientDaily.map(
+                    item => item.value
+                ),
+
+            borderRadius:10,
+
+            backgroundColor:'#20c997'
+        }]
+    }
+});
+
+document
+.querySelectorAll('.patient-filter')
+.forEach(button => {
+
+    button.addEventListener(
+        'click',
+        function(){
+
+            document
+            .querySelectorAll('.patient-filter')
+            .forEach(btn => {
+
+                btn.classList.remove(
+                    'active',
+                    'btn-primary'
+                );
+
+                btn.classList.add(
+                    'btn-outline-primary'
+                );
+
+            });
+
+            this.classList.remove(
+                'btn-outline-primary'
+            );
+
+            this.classList.add(
+                'btn-primary',
+                'active'
+            );
+
+            let source =
+                patientDaily;
+
+            if(
+                this.dataset.type === 'monthly'
+            ){
+                source =
+                    patientMonthly;
+            }
+
+            if(
+                this.dataset.type === 'yearly'
+            ){
+                source =
+                    patientYearly;
+            }
+
+            patientChart.data.labels =
+                source.map(
+                    item => item.label
+                );
+
+            patientChart.data.datasets[0].data =
+                source.map(
+                    item => item.value
+                );
+
+            patientChart.update();
+
+        }
+    );
+
+});
+
+</script>
+
+<script>
+
+const paymentData =
+JSON.parse(
+    '{{ filtered_payment_data|escapejs }}'
+);
+
+const paymentCtx =
+document
+.getElementById('paymentChart')
+.getContext('2d');
+
+let paymentChart =
+new Chart(paymentCtx, {
+
+    type:'doughnut',
+
+    data:{
+
+        labels:[
+            'Cash',
+            'UPI',
+            'Card'
+        ],
+
+        datasets:[{
+
+            data:[
+                paymentData.cash,
+                paymentData.upi,
+                paymentData.card
+            ],
+
+            backgroundColor:[
+                '#198754',
+                '#0d6efd',
+                '#6f42c1'
+            ]
+
+        }]
+    },
+
+    options:{
+        responsive:true,
+
+        plugins:{
+            legend:{
+                position:'bottom'
+            }
+        }
+    }
+});
+
+</script>
+
+<script>
+
+const genderCtx =
+document
+.getElementById('genderChart')
+.getContext('2d');
+
+new Chart(genderCtx, {
+
+    type:'doughnut',
+
+    data:{
+
+        labels:[
+            'Male',
+            'Female',
+            'Other'
+        ],
+
+        datasets:[{
+
+            data:[
+                {{ male_patients }},
+                {{ female_patients }},
+                {{ other_patients }}
+            ],
+
+            backgroundColor:[
+                '#0d6efd',
+                '#e83e8c',
+                '#6c757d'
+            ]
+        }]
+    },
+
+    options:{
+
+        responsive:true,
+
+        plugins:{
+
+            legend:{
+                position:'bottom'
+            }
+        }
+    }
+});
+
+</script>
+
+<script>
+
+const ageCtx =
+document
+.getElementById('ageChart')
+.getContext('2d');
+
+new Chart(ageCtx, {
+
+    type:'bar',
+
+    data:{
+
+        labels:[
+            '0-15',
+            '16-30',
+            '31-45',
+            '46-60',
+            '61-75',
+            '76+'
+        ],
+
+        datasets:[{
+
+            label:'Patients',
+
+            data:[
+
+                {{ age_0_5|add:age_6_10|add:age_11_15 }},
+
+                {{ age_16_20|add:age_21_25|add:age_26_30 }},
+
+                {{ age_31_35|add:age_36_40|add:age_41_45 }},
+
+                {{ age_46_50|add:age_51_55|add:age_56_60 }},
+
+                {{ age_61_65|add:age_66_70|add:age_71_75 }},
+
+                {{ age_76_80|add:age_81_85|add:age_86_90|add:age_91_95|add:age_96_plus }}
+            ]
+        }]
+    }
+});
+
+</script>
+
+<script>
+
+const doctorRevenue =
+JSON.parse(
+    '{{ doctor_chart_data|escapejs }}'
+);
+
+const doctorCtx =
+document
+.getElementById(
+    'doctorRevenueChart'
+)
+.getContext('2d');
+
+new Chart(doctorCtx, {
+
+    type:'bar',
+
+    data:{
+
+        labels:
+            doctorRevenue.map(
+                item => item.doctor
+            ),
+
+        datasets:[{
+
+            label:'Revenue',
+
+            data:
+                doctorRevenue.map(
+                    item => item.revenue
+                ),
+
+            borderRadius:12,
+
+            backgroundColor:'#6f42c1'
+        }]
+    },
+
+    options:{
+
+        indexAxis:'y',
+
+        responsive:true
+    }
+});
+
+</script>
+
+<script>
+(function() {
+    const applyChartThemeStyles = () => {
+        const isDark = document.body.classList.contains('dark-mode') || 
+                       document.body.classList.contains('dark') || 
+                       document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.documentElement.getAttribute('data-bs-theme') === 'dark' ||
+                       document.body.getAttribute('data-theme') === 'dark';
+        
+        const textColor = isDark ? '#94a3b8' : '#666666';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+
+        Object.values(Chart.instances).forEach(chart => {
+            if (chart.options.scales) {
+                Object.values(chart.options.scales).forEach(scale => {
+                    if (!scale.ticks) scale.ticks = {};
+                    if (!scale.grid) scale.grid = {};
+                    scale.ticks.color = textColor;
+                    scale.grid.color = gridColor;
+                });
+            }
+            if (chart.options.plugins && chart.options.plugins.legend) {
+                if (!chart.options.plugins.legend.labels) chart.options.plugins.legend.labels = {};
+                chart.options.plugins.legend.labels.color = textColor;
+            }
+            chart.update();
+        });
+    };
+
+    const themeObserver = new MutationObserver(applyChartThemeStyles);
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-bs-theme'] });
+    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+
+    window.addEventListener('load', () => {
+        setTimeout(applyChartThemeStyles, 150);
+    });
+})();
+</script>
+<script>
+
+document
+.querySelectorAll('.global-filter')
+.forEach(button => {
+
+    button.addEventListener(
+        'click',
+        function(){
+
+            const period =
+                this.dataset.period;
+
+            window.location.href =
+                `?period=${period}`;
+
+        }
+    );
+
+});
+
+document
+.getElementById('applyCustomRange')
+.addEventListener(
+    'click',
+    function(){
+
+        const startDate =
+            document
+            .getElementById('startDate')
+            .value;
+
+        const endDate =
+            document
+            .getElementById('endDate')
+            .value;
+
+        if(!startDate || !endDate){
+
+            alert(
+                'Please select both dates'
+            );
+
+            return;
+        }
+
+        window.location.href =
+            `?start_date=${startDate}&end_date=${endDate}`;
+
+    }
+);
+
+</script>
+<script>
+
+const conditionLabels =
+JSON.parse(
+    '{{ condition_chart_labels|escapejs }}'
+);
+
+const conditionValues =
+JSON.parse(
+    '{{ condition_chart_values|escapejs }}'
+);
+
+const conditionCtx =
+document
+.getElementById('conditionChart')
+.getContext('2d');
+
+new Chart(conditionCtx, {
+
+    type: 'pie',
+
+    data: {
+
+        labels: conditionLabels,
+
+        datasets: [{
+            data: conditionValues
+        }]
+    },
+
+    options: {
+        responsive: true
+    }
+});
+
+</script>
+
+<script>
+
+const followupLabels =
+JSON.parse(
+    '{{ followup_chart_labels|escapejs }}'
+);
+
+const followupValues =
+JSON.parse(
+    '{{ followup_chart_values|escapejs }}'
+);
+
+const followupCtx =
+document
+.getElementById('followupChart')
+.getContext('2d');
+
+new Chart(followupCtx, {
+
+    type: 'bar',
+
+    data: {
+
+        labels: followupLabels,
+
+        datasets: [{
+
+            label: 'Follow-Ups',
+
+            data: followupValues
+
+        }]
+    },
+
+    options: {
+
+       
+
+        responsive: true,
+
+        scales: {
+
+            x: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,648 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   THE PREMIUM CLINICAL CONSOLE (ELITE MODERN HOSPITAL ARCHITECTURE)
+   ========================================================================== */
+.patient-wrapper {
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 10px;
+}
+
+/* Master Header Alignment */
+.patient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.patient-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: var(--bs-heading-color, inherit);
+    margin-bottom: 2px;
+}
+
+.patient-subtitle {
+    font-size: 13px;
+    color: var(--bs-secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* Header Utilities & Buttons */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.add-patient-btn {
+    border: none;
+    padding: 11px 22px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white !important;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+}
+
+.add-patient-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+    background: linear-gradient(135deg, #60a5fa, #2563eb);
+}
+
+.clear-filter-btn {
+    border: 1px solid var(--bs-border-color);
+    padding: 10px 18px;
+    border-radius: 14px;
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    color: var(--bs-body-color);
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.clear-filter-btn:hover {
+    background-color: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.25);
+    transform: translateY(-1px);
+}
+
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background-color: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0% { transform: scale(0.9); opacity: 1; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+    70% { transform: scale(1.1); opacity: 0.4; box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    100% { transform: scale(0.9); opacity: 1; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* ==========================================================================
+   DYNAMIC INTERACTIVE LIVE SEARCH BAR
+   ========================================================================== */
+.search-container-block {
+    width: 100%;
+    max-width: 440px;
+    position: relative;
+}
+
+.live-search-input {
+    width: 100%;
+    padding: 12px 18px 12px 42px;
+    font-size: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    color: var(--bs-body-color);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.live-search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    transform: translateY(-1px);
+}
+
+.search-icon-svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--bs-secondary-color);
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.live-search-input:focus + .search-icon-svg {
+    color: #3b82f6;
+}
+
+/* ==========================================================================
+   THE SAAS METRICS CONSOLE (NEON CHROME BORDER PLATES)
+   ========================================================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.dashboard-card {
+    padding: 18px;
+    border-radius: 18px;
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    border: 1px solid var(--bs-border-color);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.01);
+}
+
+.dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* Tactical Left Accent Neon Indicators */
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    transition: all 0.2s ease;
+}
+
+.card-total::before          { background-color: #64748b; }
+.card-active::before         { background-color: #10b981; }
+.card-expired::before        { background-color: #94a3b8; }
+.card-today::before          { background-color: #f59e0b; }
+.card-active-session::before { background-color: #3b82f6; }
+.card-paid::before           { background-color: #0ea5e9; }
+.card-pending::before        { background-color: #ef4444; }
+.card-apt-pending::before    { background-color: #d97706; }
+.card-apt-completed::before  { background-color: #059669; }
+.card-apt-cancelled::before  { background-color: #475569; }
+
+/* Interactive State Click Response Engine */
+.dashboard-card.ui-active-filter {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 8px 20px rgba(0, 0, 0, 0.03) !important;
+    transform: translateY(-1px) scale(0.99);
+}
+
+.dashboard-card:active {
+    transform: scale(0.97);
+}
+
+.dashboard-card small {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    color: var(--bs-secondary-color);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.dashboard-card h3 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--bs-body-color);
+    letter-spacing: -0.5px;
+}
+
+/* ==========================================================================
+   PATIENT MATRIX REGISTRY MATRIX TABLE
+   ========================================================================== */
+.patient-table-card {
+    background-color: var(--bs-card-bg, var(--bs-body-bg));
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.01);
+}
+
+.patient-table-header {
+    padding: 20px 24px;
+    background-color: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.patient-table-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--bs-heading-color, inherit);
+    letter-spacing: -0.3px;
+}
+
+.patient-table-subtitle {
+    font-size: 12px;
+    color: var(--bs-secondary-color);
+    margin-top: 2px;
+}
+
+.patient-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.patient-table th {
+    padding: 14px 18px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--bs-secondary-color);
+    font-weight: 700;
+    border: 1px solid var(--bs-border-color); /* Added explicit border */
+    white-space: nowrap;
+    background-color: var(--bs-body-bg);
+}
+
+.patient-table td {
+    padding: 14px 18px;
+    border: 1px solid var(--bs-border-color); /* Added explicit full grid border */
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+/* Fluid Row Highlight Setup */
+.patient-row {
+    transition: background-color 0.15s ease, opacity 0.2s ease;
+}
+
+.patient-row:nth-child(even) {
+    background-color: rgba(59, 130, 246, 0.01);
+}
+
+.patient-row:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.action-link {
+    text-decoration: none !important;
+    padding: 7px 16px;
+    border-radius: 10px;
+    background-color: var(--bs-card-bg);
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color) !important;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-link:hover {
+    background-color: #3b82f6;
+    border-color: #2563eb;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   STATUS ACCENT CHIPS (PREMIUM CLINIC BADGES)
+   ========================================================================== */
+.status-pill {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-active                 { background-color: rgba(16, 185, 129, 0.08); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.15); }
+.status-expired                { background-color: rgba(148, 163, 184, 0.12); color: #64748b; border: 1px solid rgba(148, 163, 184, 0.2); }
+.status-pending                { background-color: rgba(245, 158, 11, 0.08); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.15); }
+.status-completed              { background-color: rgba(16, 185, 129, 0.08); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.15); }
+.status-cancelled              { background-color: rgba(239, 68, 68, 0.06); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.12); }
+.status-expired-appointment    { background-color: rgba(168, 85, 247, 0.08); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.15); }
+.payment-paid                  { background-color: rgba(14, 165, 233, 0.08); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.15); }
+.payment-pending               { background-color: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); }
+.payment-waived                { background-color: rgba(100, 116, 139, 0.08); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.12); }
+</style>
+
+<div class="patient-wrapper">
+    <div class="patient-header">
+        <div>
+            <div class="patient-title">Patient Operations Console</div>
+            <div class="patient-subtitle">Real-time clinical records tracking matrix</div>
+        </div>
+
+        <div class="search-container-block">
+            <svg class="search-icon-svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            </svg>
+            <input type="text" id="hospitalPatientSearch" class="live-search-input" placeholder="Search by Patient ID, Name, or Phone...">
+        </div>
+
+        <div class="header-actions">
+            <a href="{% url 'add_patient' %}" class="add-patient-btn">+ Add Patient</a>
+            <button id="clearFiltersBtn" class="clear-filter-btn">Reset Filters</button>
+            <div class="live-badge">
+                <span class="live-dot"></span>
+                <span>Live Feed</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card card-total ui-active-filter" data-filter-type="all">
+            <small>Total Registry</small>
+            <h3>{{ total_patients }}</h3>
+        </div>
+        <div class="dashboard-card card-active" data-filter-type="revisit" data-filter-value="Active">
+            <small>Active Revisit</small>
+            <h3>{{ active_patients }}</h3>
+        </div>
+        <div class="dashboard-card card-expired" data-filter-type="revisit" data-filter-value="Expired">
+            <small>Expired Revisit</small>
+            <h3>{{ inactive_patients }}</h3>
+        </div>
+        <div class="dashboard-card card-today" data-filter-type="today" data-filter-value="yes">
+            <small>Today Joined</small>
+            <h3>{{ today_patients }}</h3>
+        </div>
+        <div class="dashboard-card card-active-session" data-filter-type="session" data-filter-value="active">
+            <small>Active Sessions</small>
+            <h3 id="activeSessionCounter">0</h3>
+        </div>
+        <div class="dashboard-card card-paid" data-filter-type="session" data-filter-value="settled">
+            <small>Settled Balances</small>
+            <h3 id="settledCounter">0</h3>
+        </div>
+        <div class="dashboard-card card-pending" data-filter-type="session" data-filter-value="outstanding">
+            <small>Dues Pending</small>
+            <h3 id="outstandingCounter">0</h3>
+        </div>
+        <div class="dashboard-card card-apt-pending" data-filter-type="appointment" data-filter-value="Pending">
+            <small>Apt: Pending</small>
+            <h3>{{ pending_count }}</h3>
+        </div>
+        <div class="dashboard-card card-apt-completed" data-filter-type="appointment" data-filter-value="Completed">
+            <small>Apt: Finished</small>
+            <h3>{{ completed_count }}</h3>
+        </div>
+        <div class="dashboard-card card-apt-cancelled" data-filter-type="appointment" data-filter-value="Cancelled">
+            <small>Apt: Cancelled</small>
+            <h3>{{ cancelled_count }}</h3>
+        </div>
+    </div>
+
+    <div class="patient-table-card">
+        <div class="patient-table-header">
+            <div>
+                <span class="patient-table-title">Master Index Directory</span>
+                <div class="patient-table-subtitle">Active encounters and registration records database ledger matrix</div>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 640px; overflow-y: auto;">
+            <table class="patient-table" id="hospitalPatientsTable">
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Disease Reference</th>
+                        <th>Revisit Status</th>
+                        <th>Appointment</th>
+                        <th>Session Accounting</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients_data %}
+                    <tr class="patient-row"
+                        data-patient-id-raw="{{ patient.patient_id|lower }}"
+                        data-name-raw="{{ patient|lower }}"
+                        data-phone-raw="{{ patient.phone }}"
+                        data-revisit="{{ patient.is_active_patient|yesno:'Active,Expired' }}"
+                        data-appointment="{{ patient.latest_appointment_status }}"
+                        data-today="{% if patient.registered_today %}yes{% else %}no{% endif %}">
+                        
+                        <td class="font-monospace text-secondary small fw-bold">{{ patient.patient_id }}</td>
+                        <td><span class="text-body-emphasis fw-bold">{{ patient }}</span></td>
+                        <td class="font-monospace text-secondary small">{{ patient.phone }}</td>
+                        <td class="text-secondary small">{{ patient.disease }}</td>
+                        
+                        <td>
+                            {% if patient.is_active_patient %}
+                                <span class="status-pill status-active">Active</span>
+                            {% else %}
+                                <span class="status-pill status-expired">Expired</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if patient.latest_appointment_status == 'Pending' %}
+                                <span class="status-pill status-pending">Pending</span>
+                            {% elif patient.latest_appointment_status == 'Completed' %}
+                                <span class="status-pill status-completed">Completed</span>
+                            {% elif patient.latest_appointment_status == 'Cancelled' %}
+                                <span class="status-pill status-cancelled">Cancelled</span>
+                            {% elif patient.latest_appointment_status == 'In Consultation' %}
+
+                                <span class="status-pill payment-paid">
+                                    In Consultation
+                                </span>
+
+                            {% elif patient.latest_appointment_status == 'Transfer Requested' %}
+
+                                <span class="status-pill payment-pending">
+                                    Transfer Requested
+                                </span>
+                            {% elif patient.latest_appointment_status == 'Expired' %}
+                                <span class="status-pill status-expired-appointment">Expired</span>
+                            {% else %}
+                                <span class="status-pill status-cancelled">No Appointment</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td>
+                            {% with status=patient.latest_session_status|lower %}
+
+                                {% if status == 'completed' %}
+
+                                    <span class="status-pill payment-paid"
+                                        data-computed-state="settled">
+                                        Session Settled
+                                    </span>
+
+                                {% elif status == 'due pending' %}
+
+                                    <span class="status-pill payment-pending"
+                                        data-computed-state="outstanding">
+                                        Payment Due
+                                    </span>
+
+                                {% elif status == 'active' %}
+
+                                    <span class="status-pill payment-waived"
+                                        data-computed-state="active">
+                                        Billing In Progress
+                                    </span>
+
+                                {% elif status == 'cancelled' %}
+
+                                    <span class="status-pill status-cancelled"
+                                        data-computed-state="cancelled">
+                                        Session Cancelled
+                                    </span>
+
+                                {% elif status == 'no session' %}
+
+                                    <span class="status-pill status-expired"
+                                        data-computed-state="none">
+                                        No Billing Session
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="status-pill status-expired"
+                                        data-computed-state="none">
+                                        Unknown
+                                    </span>
+
+                                {% endif %}
+
+                            {% endwith %}
+                        </td>
+
+                        <td>
+                            <a href="{% url 'patient_history' patient.id %}" class="action-link" class="action-link">Manage</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const patientRows = document.querySelectorAll('.patient-row');
+    const searchInput = document.getElementById('hospitalPatientSearch');
+    const dashboardCards = document.querySelectorAll('.dashboard-card');
+    
+    let currentFilterType = 'all';
+    let currentFilterValue = null;
+
+    // 1. Dynamic Live Mini-Dashboard Counter Calculator
+    let activeSessionCount = 0;
+    let settledCount = 0;
+    let outstandingCount = 0;
+    
+    patientRows.forEach(row => {
+        const statusBadge = row.querySelector('[data-computed-state]');
+        if (statusBadge) {
+            const state = statusBadge.getAttribute('data-computed-state');
+            if (state === 'active') activeSessionCount++;
+            if (state === 'settled') settledCount++;
+            if (state === 'outstanding') outstandingCount++;
+        }
+    });
+    
+    const activeCounterEl = document.getElementById('activeSessionCounter');
+    const settledCounterEl = document.getElementById('settledCounter');
+    const outstandingCounterEl = document.getElementById('outstandingCounter');
+    
+    if (activeCounterEl) activeCounterEl.innerText = activeSessionCount;
+    if (settledCounterEl) settledCounterEl.innerText = settledCount;
+    if (outstandingCounterEl) outstandingCounterEl.innerText = outstandingCount;
+
+    // 2. Combined Filtering Pipeline (Instant Multi-Criteria Engine)
+    function executeCombinedFiltering() {
+        const searchQuery = searchInput.value.trim().toLowerCase();
+
+        patientRows.forEach(row => {
+            const idMatch = row.getAttribute('data-patient-id-raw').includes(searchQuery);
+            const nameMatch = row.getAttribute('data-name-raw').includes(searchQuery);
+            const phoneMatch = row.getAttribute('data-phone-raw').includes(searchQuery);
+            const textMatches = !searchQuery || idMatch || nameMatch || phoneMatch;
+
+            let categoryMatches = false;
+            if (currentFilterType === 'all' || !currentFilterType) {
+                categoryMatches = true;
+            } else if (currentFilterType === 'today') {
+                categoryMatches = (row.dataset.today === currentFilterValue);
+            } else if (currentFilterType === 'revisit') {
+                categoryMatches = (row.dataset.revisit === currentFilterValue);
+            } else if (currentFilterType === 'appointment') {
+                categoryMatches = (row.dataset.appointment === currentFilterValue);
+            } else if (currentFilterType === 'session') {
+                const innerBadge = row.querySelector('[data-computed-state]');
+                const currentState = innerBadge ? innerBadge.getAttribute('data-computed-state') : '';
+                categoryMatches = (currentState === currentFilterValue);
+            }
+
+            if (textMatches && categoryMatches) {
+                row.style.display = '';
+                row.style.opacity = '1';
+            } else {
+                row.style.display = 'none';
+                row.style.opacity = '0';
+            }
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', executeCombinedFiltering);
+    }
+
+    // 3. Card Selection Highlight Pipeline Handler
+    dashboardCards.forEach(clickableCard => {
+        clickableCard.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            dashboardCards.forEach(c => c.classList.remove('ui-active-filter'));
+            this.classList.add('ui-active-filter');
+            
+            currentFilterType = this.getAttribute('data-filter-type');
+            currentFilterValue = this.getAttribute('data-filter-value');
+            executeCombinedFiltering();
+        });
+    });
+
+    // 4. Clear Filter Mechanism to instantly restore table rows back to default views
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            if (searchInput) searchInput.value = '';
+            
+            dashboardCards.forEach(c => c.classList.remove('ui-active-filter'));
+            const totalCard = document.querySelector('.card-total');
+            if (totalCard) totalCard.classList.add('ui-active-filter');
+            
+            currentFilterType = 'all';
+            currentFilterValue = null;
+            executeCombinedFiltering();
+        });
+    }
+});
+</script>
+{% endblock %}

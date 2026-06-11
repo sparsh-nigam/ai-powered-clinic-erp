@@ -1,0 +1,22 @@
+# Virtual Environment
+clinicenv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Django Database
+db.sqlite3
+
+# User Uploads
+media/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini

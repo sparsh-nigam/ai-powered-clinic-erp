@@ -1,0 +1,1184 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div id="clinicalWorkstationWrapper" class="clinical-workstation container-fluid px-0 position-relative">
+    {% if incoming_transfers %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1090;">
+        <div id="transferToast" class="toast show toast-clinical border-0 shadow-lg rounded-3 fade" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+            <div class="toast-header d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-top-3 text-dark bg-warning">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-arrow-left-right me-2 animate-pulse"></i>
+                    <strong class="text-xs uppercase tracking-wider">Live Routing Event</strong>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-white text-dark font-monospace text-xxs">
+                        {{ incoming_transfers.first.created_at|time:"H:i" }}
+                    </span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close" onclick="var t = bootstrap.Toast.getInstance(document.getElementById('transferToast')); t.hide();"></button>
+                </div>
+            </div>
+            <div class="toast-body p-3 rounded-bottom-3 bg-panel text-primary-theme">
+                <p class="text-xs mb-3 text-primary-theme">
+
+                Incoming transfer request for
+
+                <strong>
+                {{ incoming_transfers.first.appointment.patient.name }}
+                ({{ incoming_transfers.first.appointment.patient.patient_id }})
+                </strong>
+
+                routed from
+
+                {{ incoming_transfers.first.from_doctor }}
+
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap border-bottom pb-2 mb-3 gap-3 border-soft">
+        
+        <ul class="nav nav-tabs border-bottom-0 clinical-tabs" id="doctorWorkflowTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active py-2 px-3 fw-bold text-sm" id="queue-tab" data-bs-toggle="tab" data-bs-target="#queue-screen" type="button" role="tab">
+                    <i class="bi bi-person-lines-fill me-1.5"></i>Today's Patient Queue
+                    <span class="ms-1.5 badge bg-primary text-white text-xs rounded-pill">{{ queue_appointments.count }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-2 px-4 fw-bold text-sm" id="workspace-tab" data-bs-toggle="tab" data-bs-target="#workspace-screen" type="button" role="tab">
+                    <i class="bi bi-activity me-1.5"></i>Active Consultation Desk
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-2 px-4 fw-bold text-sm" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-screen" type="button" role="tab">
+                    <i class="bi bi-arrow-left-right me-1.5"></i>Transfer Hub
+                    <span class="ms-1.5 badge bg-warning text-dark text-xs rounded-pill">
+                        {{ incoming_transfers.count }}
+                    </span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-clinical-outline d-flex align-items-center gap-1.5 py-1.5 px-3 text-xs fw-bold text-primary-theme shadow-xs" id="clinicalFullscreenToggle">
+                <i class="bi bi-fullscreen" id="fsIconActive"></i>
+                <i class="bi bi-fullscreen-exit d-none" id="fsIconExit"></i>
+                <span>Focus Workspace</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="tab-content" id="doctorWorkflowContent">
+        
+        <div class="tab-pane fade show active" id="queue-screen" role="tabpanel">
+            
+            <div class="card border-soft mb-3 shadow-xs bg-panel">
+                <div class="card-body p-2.5">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-10">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-0 text-secondary py-2 px-2.5"><i class="bi bi-search text-clinical"></i></span>
+                                <input type="text" class="form-control border-0 text-sm text-primary-theme fw-semibold py-2 bg-transparent custom-clinical-input" placeholder="Search and fetch profile via Patient ID, Token, or Name parameters...">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-clinical w-100 py-2 text-sm fw-bold shadow-xs">Pull Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-soft shadow-xs overflow-hidden bg-panel">
+                <div class="card-header border-bottom border-soft bg-light-adjust d-flex justify-content-between align-items-center py-2 px-3">
+                    <span class="text-xs fw-bold text-uppercase tracking-wider text-primary-theme">Active Patient Queue</span>
+                    <span class="badge bg-panel border border-soft text-primary-theme font-monospace text-xxs px-2.5 py-1">Sorted by Priority</span>
+                </div>
+                
+                <div class="list-group list-group-flush border-0">
+                    {% for appointment in queue_appointments %}
+                    <div class="list-group-item py-2 px-3 border-bottom border-soft transition-row {% if active_appointment and active_appointment.id == appointment.id %}border-start border-4 border-primary queue-active bg-room-active{% else %}bg-panel{% endif %}">
+                        <div class="row align-items-center g-2">
+                            <div class="col-md-1 col-2">
+                                <div class="queue-token-badge {% if active_appointment and active_appointment.id == appointment.id %}bg-primary text-white{% else %}bg-light-adjust text-primary-theme border border-soft{% endif %} text-center rounded py-1">
+                                    <small class="text-xxs d-block font-monospace {% if active_appointment and active_appointment.id == appointment.id %}opacity-75{% else %}text-secondary{% endif %}">TOKEN</small>
+                                    <span class="fs-5 fw-bold lh-1">{{ appointment.daily_token|stringformat:"02d" }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 col-6">
+                                <h6 class="text-sm fw-bold text-primary-theme mb-0">{{ appointment.patient.name }}</h6>
+                                <span class="font-monospace text-xs text-secondary fw-semibold">
+                                    {{ appointment.patient.patient_id }} &bull; {{ appointment.patient.age }} Yrs / {{ appointment.patient.get_gender_display }}
+                                </span>
+                            </div>
+                            
+                            <div class="col-md-2 col-4">
+                                <span class="text-sm text-primary-theme fw-bold d-block"><i class="bi bi-clock text-secondary me-1"></i>{{ appointment.appointment_time|time:"g:i A" }} Slot</span>
+                                {% if active_appointment and active_appointment.id == appointment.id %}
+                                <span class="text-xxs text-clinical fw-bold">Active in Room</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 col-6">
+                                {% if appointment.billing_session_status == 'Locked' %}
+                                <span class="badge bg-light-secondary text-secondary text-xxs px-2.5 py-1.5 border border-soft rounded-pill font-bold">
+                                    <i class="bi bi-lock-fill me-1"></i>Session Locked
+                                </span>
+                                {% elif appointment.billing_session_status == 'Closed' %}
+                                <span class="badge bg-light-success text-success text-xxs px-2.5 py-1.5 border border-success-subtle rounded-pill font-bold">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Settled / Complete
+                                </span>
+                                {% else %}
+                                    {% if active_appointment and active_appointment.id == appointment.id %}
+                                    <span class="badge bg-light-primary text-clinical text-xxs px-2.5 py-1.5 border border-primary-subtle rounded-pill fw-bold"><i class="bi bi-circle-fill text-danger text-xxs me-1 animate-pulse"></i> In Consultation</span>
+                                    {% elif appointment.status == 'In Consultation' %}
+
+                                    <span class="badge bg-light-primary text-clinical text-xxs px-2.5 py-1.5 border border-primary-subtle rounded-pill fw-bold">
+                                        <i class="bi bi-circle-fill text-danger text-xxs me-1 animate-pulse"></i>
+                                        In Consultation
+                                    </span>
+
+                                    {% elif appointment.status == 'Transfer Requested' %}
+
+                                    <span class="badge bg-warning">
+                                        Transfer Requested
+                                    </span>
+
+                                    {% else %}
+
+                                    <span class="badge bg-light-adjust text-primary-theme text-xxs px-2.5 py-1.5 border border-soft rounded-pill">
+                                        {{ appointment.status }}
+                                    </span>
+
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 col-6 text-end">
+                                <a href="?appointment_id={{ appointment.id }}" class="btn btn-sm {% if active_appointment and active_appointment.id == appointment.id %}btn-clinical{% else %}btn-clinical-outline border-soft text-primary-theme bg-light-adjust{% endif %} py-1.5 px-3 text-xs fw-bold shadow-xs">
+                                    {% if active_appointment and active_appointment.id == appointment.id %}Launch Desk Workspace{% else %}Open Case{% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item py-4 px-3 text-center bg-panel border-0">
+                        <div class="text-secondary mb-2"><i class="bi bi-calendar-x fs-3"></i></div>
+                        <h6 class="text-sm fw-bold text-primary-theme mb-1">No Active Patients in Queue</h6>
+                        <p class="text-xxs text-secondary mb-0">Today's clinical routing pipeline is currently empty for this practitioner profile.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="workspace-screen" role="tabpanel">
+            <div class="row g-3">
+                
+                <div class="col-xl-3 col-md-4 mb-2">
+                    <div class="card border shadow-xs p-3 bg-panel rounded-3 border-soft">
+                        
+                        <div class="d-flex justify-content-between align-items-start pb-2 border-bottom border-soft mb-2">
+                            <div>
+                                {% if active_patient %}
+                                <h5 class="fw-bold text-primary-theme mb-0 text-md">{{ active_patient.name }}</h5>
+                                <span class="font-monospace text-secondary text-xs">{{ active_patient.patient_id }}</span>
+                                {% else %}
+                                <h5 class="fw-bold text-primary-theme mb-0 text-md">No Active Patient</h5>
+                                <span class="font-monospace text-secondary text-xs">Waiting for case selection</span>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light-adjust text-primary-theme font-monospace px-2 py-1 text-xs border border-soft">{% if active_appointment %} Token #{{ active_appointment.daily_token|stringformat:"02d" }} {% else %} No Token {% endif %}</span>
+                        </div>
+
+                        <div class="row g-2 mb-2 text-xxs text-primary-theme text-center">
+                            <div class="col-6">
+                                <div class="bg-light-adjust py-1 px-1.5 rounded border border-soft">
+                                    <span class="text-secondary d-block">Age / Gender</span>
+                                    {% if active_patient %}
+                                    <strong class="text-xs">{{ active_patient.age }} Yrs / {{ active_patient.get_gender_display|slice:":1" }}</strong>
+                                    {% else %}
+                                    <strong class="text-xs">--</strong>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-light-adjust py-1 px-1.5 rounded border border-soft">
+                                    <span class="text-secondary d-block">Blood Group</span>
+                                    <strong class="text-xs text-danger">{{ active_patient.blood_group|default:"--" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <div class="p-2 rounded border-start border-3 border-danger bg-danger-subtle text-danger text-xxs fw-bold">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Allergies: {{ active_patient.allergies|default:"None Declared" }}
+                            </div>
+                        </div>
+
+                        <div class="bg-light-adjust py-1.5 px-2 rounded border border-soft mb-2">
+
+                            <span class="text-secondary d-block text-xs">
+                                Chronic Conditions
+                            </span>
+
+                            <strong class="text-xs">
+                                {{ active_patient.chronic_conditions|default:"None" }}
+                            </strong>
+
+                        </div>
+
+                        <div class="mb-2 bg-light-adjust p-2 rounded border border-soft">
+                            <div class="row g-2 mb-2">
+
+                                <div class="col-6">
+                                    <div class="bg-light-adjust py-1 px-1.5 rounded border border-soft text-center">
+
+                                        <span class="text-secondary d-block">
+                                            Height
+                                        </span>
+
+                                        <strong class="text-xs">
+                                            {{ active_patient.height|default:"--" }} cm
+                                        </strong>
+
+                                    </div>
+                                </div>
+
+                                <div class="col-6">
+                                    <div class="bg-light-adjust py-1 px-1.5 rounded border border-soft text-center">
+
+                                        <span class="text-secondary d-block">
+                                            Weight
+                                        </span>
+
+                                        <strong class="text-xs">
+                                            {{ active_patient.weight|default:"--" }} kg
+                                        </strong>
+
+                                    </div>
+                                </div>
+
+                            </div>
+                            
+                        </div>
+
+                        <div class="mb-3 p-2 rounded border border-warning-subtle bg-warning-subtle">
+                            <span class="text-warning-dark text-xxs fw-bold uppercase tracking-wider d-block mb-1">
+                                <i class="bi bi-journal-text"></i> Carried Notes From Previous Turn
+                            </span>
+                            <p class="text-primary-theme text-xs mb-0 font-sans italic-text fw-semibold leading-sm">
+                                "{{ active_patient.disease|default:"Initial diagnostic valuation entry pending standard progression." }}"
+                            </p>
+                        </div>
+
+                        <div class="pt-2 border-top border-soft">
+                            <label class="text-primary-theme text-xxs fw-bold uppercase tracking-wider d-block mb-1.5">
+                                <i class="bi bi-folder2 text-secondary me-1"></i> Clinical Reports
+                            </label>
+                            <div class="accordion accordion-flush unique-date-accordion" id="dateWiseReportVault">
+                                {% if active_patient and patient_documents %}
+                                    {% regroup patient_documents by uploaded_at|date:"d M Y" as grouped_reports %}
+                                    
+                                    {% for date_group in grouped_reports|slice:":3" %}
+                                    <div class="accordion-item bg-transparent border-bottom border-soft">
+                                        <h2 class="accordion-header" id="headingReport{{ forloop.counter }}">
+                                            <button class="accordion-button collapsed py-1.5 px-1 text-xs fw-bold bg-transparent text-primary-theme shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReport{{ forloop.counter }}">
+                                                <i class="bi bi-calendar3 text-secondary me-2"></i>{{ date_group.grouper }} <span class="ms-1.5 text-xxs text-secondary font-normal">({{ date_group.list|length }} Reports)</span>
+                                            </button>
+                                        </h2>
+                                        <div id="collapseReport{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#dateWiseReportVault">
+                                            <div class="accordion-body px-1 py-1.5 d-grid gap-1.5">
+                                                {% for document in date_group.list %}
+                                                <div class="d-flex justify-content-between align-items-center bg-light-adjust p-1.5 rounded border border-soft text-xxs mb-1">
+                                                    <span class="text-primary-theme text-truncate fw-bold me-2" style="max-width: 140px;">
+                                                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i>{% if document.custom_name %}{{ document.custom_name }}{% else %}{{ document.file.name }}{% endif %}
+                                                    </span>
+                                                    <a href="{{ document.file.url }}" target="_blank" class="btn btn-xs btn-link p-0 text-decoration-none font-bold text-clinical">View</a>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    
+                                    {% if grouped_reports|length > 3 %}
+                                    <div class="text-center pt-2">
+                                        <button type="button" class="btn btn-xxs btn-light-adjust border border-soft text-primary-theme w-100 py-1.5 font-bold">View Full Archive</button>
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="text-center py-3 text-muted">
+                                        <small class="text-xxs font-sans d-block">No reports or clinical attachments logged.</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="col-xl-6 col-md-8">
+                    <div class="card border p-4 shadow-sm main-consultation-card h-100 bg-panel rounded-3 border-soft">
+                        
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-2 mb-3 border-bottom border-soft">
+                            <span class="text-primary-theme font-bold text-sm d-flex align-items-center">
+                                <i class="bi bi-circle-fill text-success me-2 text-xxs animate-pulse"></i>Evaluation Pad
+                            </span>
+                            
+                            <div class="nav nav-pills bg-light-adjust p-1 rounded border border-soft mode-pills" id="clinicalModeTab" role="tablist">
+                                <button class="nav-link text-xs py-1 px-3 fw-bold active" id="mode-digital-tab" data-bs-toggle="tab" data-bs-target="#pane-digital-mode" type="button" role="tab">Digital Entry Mode</button>
+                                <button class="nav-link text-xs py-1 px-3 fw-bold" id="mode-physical-tab" data-bs-toggle="tab" data-bs-target="#pane-physical-mode" type="button" role="tab">Physical Sheet Mode</button>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="clinicalModeTabContent">
+                            
+                            <div class="tab-pane fade show active" id="pane-digital-mode" role="tabpanel">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    {% if consultation_record.status == 'Completed' %}
+                                    <div class="alert alert-success mb-3">
+                                        <strong>Consultation Completed</strong><br>
+                                        Waiting for billing clearance. This consultation is now locked.
+                                    </div>
+                                    {% endif %}
+                                            <div class="mb-3">
+                                                <label class="form-label text-xs fw-bold text-secondary uppercase tracking-wider mb-1">Symptoms / Presenting Complaints</label>
+                                                <textarea name="chief_complaint"
+                                                          {% if consultation_record.status == 'Completed' %}readonly{% endif %}  
+                                                          class="form-control clinical-textarea text-sm text-primary-theme" rows="2" placeholder="Start entering complaints notes...">{{ consultation_record.chief_complaint }}</textarea>                                </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label text-xs fw-bold text-secondary uppercase tracking-wider mb-1">Clinical Evaluation & Diagnosis</label>
+                                                <input type="text" name="diagnosis" {% if consultation_record.status == 'Completed' %}readonly{% endif %} class="form-control text-sm mb-2 font-bold border-soft bg-transparent text-primary-theme custom-clinical-input" value="{{ consultation_record.diagnosis }}" placeholder="Primary Diagnostic Index Title (e.g. Essential Hypertension)">
+                                                <textarea name="clinical_notes" {% if consultation_record.status == 'Completed' %}readonly{% endif %} class="form-control clinical-textarea text-sm text-primary-theme" rows="2" placeholder="Secondary observations, physical descriptors...">{{ consultation_record.clinical_notes }}</textarea>
+                                            </div>
+
+                                            <!-- PREMIUM DYNAMIC ENTRY BOX -->
+                                            <div class="premium-rx-box p-3 mb-4 rounded-3 shadow-xs position-relative overflow-hidden">
+                                                <div class="d-flex align-items-center mb-3 pb-2 border-bottom border-soft">
+                                                    <div class="bg-clinical-subtle p-1.5 rounded me-2 d-flex align-items-center justify-content-center">
+                                                        <i class="bi bi-capsule-pill text-clinical fs-6"></i>
+                                                    </div>
+                                                    <h6 class="text-sm fw-bold text-primary-theme mb-0 tracking-wider uppercase">Add Treatment & Details</h6>
+                                                </div>
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-3">
+                                                        <label class="text-xxs text-secondary uppercase fw-bold mb-1 ps-1">Type</label>
+                                                        <select id="entry_item_type" class="form-select text-sm fw-bold border-soft bg-light-adjust text-primary-theme custom-clinical-select" {% if consultation_record.status == 'Completed' %}disabled{% endif %}>
+                                                            <option value="Medicine" selected>Medicine</option>
+                                                            <option value="Test">Test</option>
+                                                            <option value="Procedure">Procedure</option>
+                                                            <option value="Therapy">Therapy</option>
+                                                            <option value="Instruction">Instruction</option>
+                                                        </select>
+                                                    </div>
+                                                    <!-- Dynamic Name Input -->
+                                                    <div class="col-md-3" id="wrap_item_name" style="transition: all 0.2s ease;">
+                                                        <label id="label_item_name" class="text-xxs text-secondary uppercase fw-bold mb-1 ps-1">Item Name</label>
+                                                        <input type="text" id="entry_item_name" class="form-control text-sm border-soft bg-light-adjust text-primary-theme custom-clinical-input" placeholder="e.g. Paracetamol 500mg" {% if consultation_record.status == 'Completed' %}readonly{% endif %}>
+                                                    </div>
+                                                    <!-- Dynamic Dosage Input -->
+                                                    <div class="col-md-2" id="wrap_item_dosage" style="transition: all 0.2s ease;">
+                                                        <label id="label_item_dosage" class="text-xxs text-secondary uppercase fw-bold mb-1 ps-1">Dosage</label>
+                                                        <input type="text" id="entry_item_dosage" class="form-control text-sm border-soft bg-light-adjust text-primary-theme custom-clinical-input" placeholder="e.g. 1-0-1" {% if consultation_record.status == 'Completed' %}readonly{% endif %}>
+                                                    </div>
+                                                    <!-- Dynamic Duration Input -->
+                                                    <div class="col-md-2" id="wrap_item_duration" style="transition: all 0.2s ease;">
+                                                        <label id="label_item_duration" class="text-xxs text-secondary uppercase fw-bold mb-1 ps-1">Duration</label>
+                                                        <input type="text" id="entry_item_duration" class="form-control text-sm border-soft bg-light-adjust text-primary-theme custom-clinical-input" placeholder="e.g. 5 Days" {% if consultation_record.status == 'Completed' %}readonly{% endif %}>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        {% if consultation_record.status != 'Completed' %}
+                                                        <button type="button" id="btn-add-rx-row" class="btn btn-clinical w-100 py-1.5 text-xs fw-bold shadow-xs">
+                                                            <i class="bi bi-plus-lg me-1"></i> Add Row
+                                                        </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- END PREMIUM BOX -->
+
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="text-xs fw-bold text-secondary uppercase tracking-wider mb-0">Prescription Orders (Rx)</label>
+                                                </div>
+                                                <div class="border border-soft rounded-3 overflow-hidden bg-panel">
+                                                    <table class="table table-sm align-middle text-sm mb-0 table-borderless unique-rx-table text-primary-theme">
+                                                        <!-- Softened generic headers suitable for all item types -->
+                                                        <thead class="bg-light-adjust border-bottom border-soft">
+                                                            <tr>
+                                                                <th width="45%" class="ps-3 py-1.5 text-secondary font-bold text-xs">Treatment / Item Name</th>
+                                                                <th width="35%" class="py-1.5 text-secondary font-bold text-xs">Dosage / Details</th>
+                                                                <th width="20%" class="py-1.5 text-secondary font-bold text-xs">Duration / Sessions</th>
+                                                                <th width="20%" class="py-1.5 text-secondary font-bold text-xs">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="rx-table-body">
+                                                            {% for item in treatment_items %}
+
+                                                            <tr class="border-bottom border-soft">
+
+                                                                <td class="ps-3">
+                                                                    {% if item.item_type == 'Medicine' %}
+                                                                        <span class="badge bg-success me-2">Medicine</span>
+                                                                    {% elif item.item_type == 'Test' %}
+                                                                        <span class="badge bg-info me-2">Test</span>
+                                                                    {% elif item.item_type == 'Procedure' %}
+                                                                        <span class="badge bg-warning text-dark me-2">Procedure</span>
+                                                                    {% elif item.item_type == 'Therapy' %}
+                                                                        <span class="badge bg-primary me-2">Therapy</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-secondary me-2">Instruction</span>
+                                                                    {% endif %}
+                                                                    {{ item.name }}
+                                                                </td>
+
+                                                                <td>
+                                                                    {{ item.dosage|default:"--" }}
+                                                                </td>
+
+                                                                <td>
+                                                                    {{ item.duration|default:"--" }}
+                                                                </td>
+
+                                                                <td>
+                                                                    {% if consultation_record.status != 'Completed' %}
+                                                                    <button
+                                                                        type="submit"
+                                                                        name="delete_item_id"
+                                                                        value="{{ item.id }}"
+                                                                        class="btn btn-sm btn-danger py-0 px-2 text-xxs fw-bold">
+                                                                        Delete
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% empty %}
+                                                            <tr>
+                                                                <td colspan="4" class="text-center text-muted py-3">
+                                                                    No prescription items added yet
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-1">
+                                                <label class="form-label text-xs fw-bold text-secondary uppercase tracking-wider mb-1">Advice / Diet & Lifestyle Instructions</label>
+                                                <textarea name="advice" {% if consultation_record.status == 'Completed' %}readonly{% endif %} class="form-control clinical-textarea text-sm text-primary-theme" rows="2" placeholder="Diet, hydration, exercise limits tracking guidelines...">{{ consultation_record.advice }}</textarea>
+                                                <div class="mb-3 mt-3">
+                                                    <label class="form-label text-xs fw-bold text-secondary uppercase tracking-wider mb-1">
+                                                        Follow Up Instructions
+                                                    </label>
+
+                                                    <input
+                                                        type="text"
+                                                        name="followup_text"
+                                                        {% if consultation_record.status == 'Completed' %}readonly{% endif %}
+                                                        class="form-control custom-clinical-input"
+                                                        placeholder="e.g. Review after 15 days, Review after 2 months, PRN"
+                                                        value="{{ consultation_record.followup_instruction|default:'' }}"
+                                                    >
+                                                </div>
+                                            </div>
+                                </div>
+
+                                        <div class="tab-pane fade" id="pane-physical-mode" role="tabpanel">
+                                            <div class="p-2.5 bg-light-adjust rounded-3 border border-soft mb-3 text-center text-primary-theme">
+                                                <p class="text-xs mb-0 font-bold">
+                                                    <i class="bi bi-feather text-clinical me-1"></i> 
+                                                    <strong>Physical Writing Mode Active:</strong> Document evaluation tracking arrays on the hardcopy paper prescription block. Front desk operators will attach digital scans at billing discharge blocks.
+                                                </p>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="collapse mb-3" id="transferWorkflowWidget">
+                                        <div class="p-3 border border-warning bg-light-adjust rounded-3 text-primary-theme shadow-xs">
+                                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-soft">
+                                                <h6 class="fw-bold text-primary-theme mb-0 text-xs"><i class="bi bi-arrow-left-right text-warning me-1"></i>Configure Patient Referral Handshake</h6>
+                                            </div>
+                                            <div class="row g-2">
+                                                    <div class="col-sm-6">
+                                                        <label class="text-xxs text-secondary uppercase d-block mb-1">Target Specialist Doctor</label>
+                                                        <select name="target_doctor" class="form-select text-sm fw-bold border-soft bg-transparent text-primary-theme custom-clinical-select rounded-2">
+                                                            <option selected disabled>
+                                                                Choose Target Doctor...
+                                                            </option>
+
+                                                            {% for doctor in available_doctors %}
+
+                                                            <option value="{{ doctor.id }}">
+
+                                                                {{ doctor }}
+
+                                                                ({{ doctor.specialization }})
+
+                                                            </option>
+
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <label class="text-xxs text-secondary uppercase d-block mb-1">Routing Urgency Matrix</label>
+                                                        <select
+                                                            name="transfer_priority"
+                                                            class="form-select text-sm fw-bold border-soft bg-transparent text-primary-theme custom-clinical-select rounded-2">
+
+                                                            <option value="routine">
+                                                                Routine Outbound Referral
+                                                            </option>
+
+                                                            <option value="stat">
+                                                                Stat Emergency Handover
+                                                            </option>
+
+                                                        </select>
+                                                        
+                                                    </div>
+                                                    <div class="col-12">
+
+                                                            <label class="text-xxs text-secondary uppercase d-block mb-1">
+                                                                Transfer Reason
+                                                            </label>
+
+                                                            <textarea
+                                                                name="transfer_reason"
+                                                                rows="2"
+                                                                class="form-control"
+                                                                placeholder="Reason for transfer"></textarea>
+
+                                                    </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                
+                                    <div class="d-flex justify-content-between pt-2.5 border-top border-soft mt-3">
+                                        {% if consultation_record.status != 'Completed' %}
+                                        <button type="submit" class="btn btn-clinical-outline border-soft text-primary-theme py-2 px-3 text-sm fw-bold bg-light-adjust">
+                                            Save Draft
+                                        </button>
+                                        {% endif %}
+                                        
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-warning border-0 py-2 px-3 text-sm fw-bold text-dark shadow-xs rounded-3" data-bs-toggle="collapse" data-bs-target="#transferWorkflowWidget">
+                                                Transfer Patient
+                                            </button>
+
+                                            <button
+                                                type="submit"
+                                                name="action"
+                                                value="transfer_patient"
+                                                class="btn btn-warning">
+
+                                                Send Transfer Request
+
+                                            </button>
+                                            {% if consultation_record.status != 'Completed' %}
+
+                                            <button
+                                                type="submit"
+                                                name="action"
+                                                value="complete_consultation"
+                                                class="btn btn-clinical text-white py-2 px-4 text-sm fw-bold shadow-xs">
+                                                Complete Consultation
+                                            </button>
+
+                                            {% endif %}
+                                            {% if consultation_record.status == 'Completed' %}
+
+                                            <a
+                                                href="{% url 'prescription_print' active_appointment.id %}"
+                                                target="_blank"
+                                                class="btn btn-primary">
+
+                                                Print Prescription
+
+                                            </a>
+
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                    </div>
+
+                <div class="col-xl-3 col-md-12">
+                    <div class="card border shadow-xs p-3 bg-panel rounded-3 border-soft h-100">
+                        <div class="d-flex align-items-center pb-2 border-bottom border-soft mb-3">
+                            <i class="bi bi-clock-history text-secondary me-2 fs-6"></i>
+                            <h6 class="fw-bold text-primary-theme mb-0 text-xs uppercase tracking-wider">Patient History Timeline</h6>
+                        </div>
+                        
+                        <div class="position-relative ps-3 border-start unique-history-timeline ms-2">
+                            {% if active_patient %}
+                                {% for visit in past_appointments|slice:":5" %}
+                                <div class="position-relative mb-3.5 timeline-node font-sans border-bottom border-soft pb-2.5">
+                                    <span class="timeline-dot bg-success"></span>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-0.5 text-xxs">
+                                        <span class="fw-bold text-primary-theme">
+                                            <i class="bi bi-calendar3 text-secondary me-1"></i>
+                                            {{ visit.appointment_date }}
+                                        </span>
+                                        <span class="font-monospace text-secondary">
+                                            {{ visit.appointment_time|time:"g:i A" }}
+                                        </span>
+                                    </div>
+
+                                    <p class="text-xxs text-secondary mb-1">
+                                        Doctor: <strong>{{ visit.doctor }}</strong>
+                                    </p>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge bg-light-primary text-clinical text-xxs px-1.5 py-0.5 border border-primary-subtle rounded-pill font-normal">
+                                            {{ visit.status }}
+                                        </span>
+                                        <span class="badge {% if visit.payment_status == 'Paid' %}bg-success-subtle text-success border border-success border-opacity-30{% else %}bg-warning-subtle text-dark border border-warning border-opacity-30{% endif %} text-xxs px-1.5 py-0.5 fw-bold">
+                                            {{ visit.payment_status }}
+                                        </span>
+                                    </div>
+
+                                    {% if visit.has_digital_prescription %}
+
+                                    <a
+                                        href="{% url 'prescription_print' visit.id %}"
+                                        target="_blank"
+                                        class="btn btn-xxs btn-primary w-100 mb-1">
+
+                                        📄 Digital Prescription
+
+                                    </a>
+
+                                    {% endif %}
+
+
+                                    {% if visit.has_physical_prescription %}
+
+                                    <a
+                                        href="{{ visit.physical_prescription_url }}"
+                                        target="_blank"
+                                        class="btn btn-xxs btn-warning w-100">
+
+                                        📷 Physical Prescription
+
+                                    </a>
+
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-3 text-muted">
+                                    <small class="text-xxs font-sans d-block">No historical entries recorded for this profile.</small>
+                                </div>
+                                {% endfor %}
+
+                                {% if past_appointments.count > 5 %}
+                                <div class="text-center pt-1">
+                                    <button type="button" class="btn btn-xxs btn-light-adjust border border-soft text-primary-theme w-100 py-1.5 font-bold shadow-sm">
+                                        Load More
+                                    </button>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                            <div class="text-center py-3 text-muted">
+                                <small class="text-xxs font-sans d-block">Select a patient to view timeline records.</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="transfer-screen" role="tabpanel">
+            <div class="card shadow-sm border border-soft p-4 bg-panel rounded-3">
+                <h5 class="fw-bold text-primary-theme mb-3 border-bottom border-soft pb-2">
+                    <i class="bi bi-arrow-left-right text-primary me-2"></i>Unified Transfer Hub Registry
+                </h5>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-light-adjust border border-soft">
+                            <h6 class="fw-bold text-primary-theme text-xs uppercase tracking-wider mb-2.5 border-bottom border-soft pb-1.5 text-danger">
+                                <i class="bi bi-box-arrow-in-right me-1.5"></i>Incoming Referral Allocation
+                            </h6>
+                            {% for transfer in incoming_transfers %}
+
+                            <div class="p-3 card shadow-xs border border-soft mb-2 bg-panel">
+
+                                <div class="d-flex justify-content-between mb-1 fw-bold text-primary-theme">
+
+                                    <span class="text-sm">
+                                        {{ transfer.appointment.patient.name }}
+                                    </span>
+
+                                    <span class="font-monospace text-xs text-secondary">
+                                        Token #{{ transfer.appointment.daily_token }}
+                                    </span>
+
+                                </div>
+
+                                <p class="text-xs text-secondary mb-3">
+
+                                    Referred by
+
+                                    <strong>
+                                        {{ transfer.from_doctor }}
+                                    </strong>
+
+                                    •
+
+                                    {{ transfer.priority }}
+
+                                </p>
+
+                                <p class="text-xs text-primary-theme mb-3">
+
+                                    {{ transfer.reason }}
+
+                                </p>
+
+                                <form method="POST">
+
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="transfer_id"
+                                        value="{{ transfer.id }}"
+                                    >
+
+                                    <div class="d-flex gap-2 justify-content-end">
+
+                                        <button
+                                            type="submit"
+                                            name="action"
+                                            value="accept_transfer"
+                                            class="btn btn-sm btn-clinical">
+
+                                            Accept
+
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            name="action"
+                                            value="reject_transfer"
+                                            class="btn btn-sm btn-clinical-outline">
+
+                                            Reject
+
+                                        </button>
+
+                                    </div>
+
+                                </form>
+
+                               
+
+                            </div>
+
+                            {% empty %}
+
+                            <div class="text-center py-3 text-muted">
+
+                                No pending transfers.
+
+                            </div>
+
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-light-adjust border border-soft">
+                            <h6 class="fw-bold text-primary-theme text-xs uppercase tracking-wider mb-2.5 border-bottom border-soft pb-1.5 text-primary">
+                                <i class="bi bi-box-arrow-up-right me-1.5"></i>Outbound Tracking Channels
+                            </h6>
+                            {% for transfer in outgoing_transfers %}
+
+                            <div class="p-3 card shadow-xs border border-soft mb-2 bg-panel">
+
+                                <div class="d-flex justify-content-between text-muted mb-2">
+
+                                    <span class="fw-bold text-sm text-primary-theme">
+
+                                        {{ transfer.appointment.patient.name }}
+
+                                    </span>
+
+                                    <span class="badge bg-panel border border-warning text-warning">
+
+                                        {{ transfer.status }}
+
+                                    </span>
+
+                                </div>
+
+                                <p class="text-xs text-secondary mb-0">
+
+                                    Target:
+
+                                    <strong>
+                                        {{ transfer.to_doctor }}
+                                    </strong>
+
+                                </p>
+
+                            </div>
+
+                            {% empty %}
+
+                            <div class="text-center py-3 text-muted">
+
+                                No outgoing transfers.
+
+                            </div>
+
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* 1. ADAPTIVE HIGH-CONTRAST INTERFACE DESIGN SPECIFICATIONS (VARIABLE ARCHITECTURE) */
+    :root {
+        --bg-primary-adjust: #f8fafc;
+        --panel-bg-adjust: #ffffff;
+        --border-soft-adjust: #cbd5e1;
+        --text-primary-adjust: #0f172a;
+        --text-secondary-adjust: #475569;
+        --accent-clinical-adjust: #435ebe;
+        --accent-clinical-subtle: rgba(67, 94, 190, 0.05);
+        --timeline-track-adjust: #94a3b8;
+    }
+
+    /* Automated Theme Class Matrix Interlocking cleanly with Mazer context wrappers */
+    .theme-dark :root, [data-bs-theme="dark"] :root, .theme-dark, [data-bs-theme="dark"] {
+        --bg-primary-adjust: #090d16;
+        --panel-bg-adjust: #111726;
+        --border-soft-adjust: #24324f;
+        --text-primary-adjust: #f1f5f9;
+        --text-secondary-adjust: #788da8;
+        --accent-clinical-adjust: #3b82f6;
+        --accent-clinical-subtle: rgba(59, 130, 246, 0.08);
+        --timeline-track-adjust: #2e3f5e;
+    }
+
+    /* 2. THEMATIC ELEMENT STRUCTURAL ASSIGNMENTS */
+    .clinical-workstation { background-color: var(--bg-primary-adjust) !important; color: var(--text-primary-adjust) !important; }
+    .clinical-workstation .card, .clinical-workstation .dropdown-menu { background-color: var(--panel-bg-adjust) !important; border-color: var(--border-soft-adjust) !important; }
+    .clinical-workstation .border-soft, .clinical-workstation .list-group-item { border-color: var(--border-soft-adjust) !important; }
+    .clinical-workstation .bg-panel { background-color: var(--panel-bg-adjust) !important; }
+    .clinical-workstation .bg-light-adjust { background-color: rgba(120, 141, 168, 0.06) !important; }
+    .clinical-workstation .bg-room-active { background-color: var(--accent-clinical-subtle) !important; }
+    .clinical-workstation .bg-clinical-subtle { background-color: var(--accent-clinical-subtle) !important; }
+    .clinical-workstation .text-primary-theme { color: var(--text-primary-adjust) !important; }
+    .clinical-workstation .text-secondary { color: var(--text-secondary-adjust) !important; }
+    .clinical-workstation .text-clinical { color: var(--accent-clinical-adjust) !important; }
+    .clinical-workstation .unique-history-timeline { border-color: var(--timeline-track-adjust) !important; }
+
+    /* 3. HARDENED INPUT FIELD RENDERING DESIGNS */
+    .clinical-textarea, .custom-clinical-input, .custom-clinical-select, .unique-rx-table input {
+        background-color: rgba(120, 141, 168, 0.04) !important;
+        border: 0 !important;
+        border-bottom: 2px solid #5a6a85 !important;
+        color: var(--text-primary-adjust) !important;
+        border-radius: 0 !important;
+        resize: none;
+        padding: 0.4rem 0.25rem !important;
+        transition: border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .clinical-textarea:focus, .custom-clinical-input:focus, .custom-clinical-select:focus, .unique-rx-table input:focus {
+        background-color: transparent !important;
+        border-bottom-color: var(--accent-clinical-adjust) !important;
+        color: var(--text-primary-adjust) !important;
+        box-shadow: none !important;
+    }
+    
+    .next-turn-textarea {
+        border: 2px dashed #d97706 !important;
+        background-color: rgba(217, 119, 6, 0.02) !important;
+        color: var(--text-primary-adjust) !important;
+        border-radius: 0.375rem !important;
+        padding: 0.5rem !important;
+        resize: none;
+    }
+    .next-turn-textarea:focus { background-color: transparent !important; border-color: var(--accent-clinical-adjust) !important; box-shadow: none !important; }
+
+    /* Premium Medicine Box Styling */
+    .premium-rx-box {
+        border: 1px solid var(--accent-clinical-adjust) !important;
+        background-color: var(--panel-bg-adjust);
+    }
+    .new-client-row {
+        animation: rowSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes rowSlideIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Buttons Configuration Parameters */
+    .btn-clinical { background-color: var(--accent-clinical-adjust) !important; color: #ffffff !important; border: none !important; }
+    .btn-clinical:hover { opacity: 0.9; color: #ffffff !important; }
+    .btn-clinical-outline { background-color: transparent !important; border: 1px solid var(--border-soft-adjust) !important; color: var(--text-primary-adjust) !important; }
+    .btn-clinical-outline:hover { background-color: rgba(120, 141, 168, 0.1) !important; }
+
+    /* 4. RE-ORGANIZED COMPACT SPACING HIERARCHY VALUES */
+    .text-sm { font-size: 0.875rem !important; }
+    .text-xs { font-size: 0.815rem !important; }
+    .text-xxs { font-size: 0.725rem !important; }
+    .btn-xxs { padding: 0.15rem 0.35rem; font-size: 0.72rem; border-radius: 0.20rem; }
+    .gap-1.5 { gap: 0.375rem !important; }
+    .italic-text { font-style: italic; }
+    .font-normal { font-weight: 400 !important; }
+    .queue-token-badge { padding: 0.35rem 0.5rem; text-align: center; min-width: 55px; }
+    .btn-xs { padding: 0.15rem 0.4rem; font-size: 0.75rem; border-radius: 0.2rem; }
+    .clinical-toast { width: 320px; }
+    .leading-sm { line-height: 1.25 !important; }
+
+    /* Top Horizontal Tabs Switch Array */
+    .clinical-tabs .nav-link { color: inherit; border: none; border-bottom: 3px solid transparent; background: transparent; opacity: 0.65; transition: all 0.2s ease; }
+    .clinical-tabs .nav-link.active { color: var(--accent-clinical-adjust) !important; border-bottom: 3px solid var(--accent-clinical-adjust) !important; background: transparent !important; opacity: 1; }
+    .clinical-tabs .nav-link:hover { opacity: 1; color: var(--accent-clinical-adjust); }
+
+    /* Mode Selection Pills Options mappings */
+    .mode-pills .nav-link { color: inherit; background-color: transparent; border-radius: 0.25rem; opacity: 0.75; }
+    .mode-pills .nav-link.active { background-color: var(--accent-clinical-subtle) !important; color: var(--accent-clinical-adjust) !important; border: 1px solid var(--border-soft-adjust) !important; opacity: 1; }
+
+    /* Accordion Structures customization headers */
+    .unique-date-accordion .accordion-button:not(.collapsed) { background-color: transparent !important; color: var(--accent-clinical-adjust) !important; box-shadow: none !important; }
+    .unique-date-accordion .accordion-button { color: inherit !important; }
+
+    /* CSS Pure History Timeline Nodes Mapping Parameters */
+    .unique-history-timeline .timeline-node { padding-bottom: 0.65rem; position: relative; }
+    .timeline-dot { position: absolute; width: 8px; height: 8px; left: -14px; top: 5px; border-radius: 50%; }
+
+    /* Row Hover Continuity Rules */
+    .transition-row { transition: background-color 0.1s ease; }
+    .transition-row:hover { background-color: rgba(67, 94, 190, 0.03) !important; color: inherit !important; }
+
+    /* 5. IMMERSIVE WORKSTATION FULLSCREEN MOVEMENT SWITCHES */
+    body { transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .focus-clinical-mode #sidebar { width: 0 !important; opacity: 0 !important; transform: translateX(-100%) !important; visibility: hidden !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .focus-clinical-mode #main { margin-left: 0 !important; padding: 1rem !important; max-width: 100% !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    #sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    #main { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Animated pulse parameters for critical triage layers */
+    .animate-pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const fullscreenBtn = document.getElementById("clinicalFullscreenToggle");
+        const iconActive = document.getElementById("fsIconActive");
+        const iconExit = document.getElementById("fsIconExit");
+
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener("click", function () {
+                document.body.classList.toggle("focus-clinical-mode");
+                if (document.body.classList.contains("focus-clinical-mode")) {
+                    iconActive.classList.add("d-none");
+                    iconExit.classList.remove("d-none");
+                } else {
+                    iconActive.classList.remove("d-none");
+                    iconExit.classList.add("d-none");
+                }
+            });
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("appointment_id")) {
+            const workspaceTab = document.getElementById("workspace-tab");
+            if (workspaceTab) {
+                const tab = new bootstrap.Tab(workspaceTab);
+                tab.show();
+            }
+        }
+
+        // ==========================================
+        // DYNAMIC ADD ROW LOGIC (FRONTEND ONLY)
+        // ==========================================
+        const typeElem = document.getElementById("entry_item_type");
+        const nameWrap = document.getElementById("wrap_item_name");
+        const nameLabel = document.getElementById("label_item_name");
+        const nameInput = document.getElementById("entry_item_name");
+
+        const dosageWrap = document.getElementById("wrap_item_dosage");
+        const dosageLabel = document.getElementById("label_item_dosage");
+        const dosageInput = document.getElementById("entry_item_dosage");
+
+        const durationWrap = document.getElementById("wrap_item_duration");
+        const durationLabel = document.getElementById("label_item_duration");
+        const durationInput = document.getElementById("entry_item_duration");
+
+        // Configuration Map for Labels & Layout behavior
+        const uiConfig = {
+            'Medicine': {
+                name: { label: 'Item Name', placeholder: 'e.g. Paracetamol 500mg', cols: 'col-md-3' },
+                dosage: { show: true, label: 'Dosage', placeholder: 'e.g. 1-0-1' },
+                duration: { show: true, label: 'Duration', placeholder: 'e.g. 5 Days' }
+            },
+            'Test': {
+                name: { label: 'Test Name', placeholder: 'e.g. Complete Blood Count', cols: 'col-md-3' },
+                dosage: { show: true, label: 'Frequency', placeholder: 'e.g. Monthly' },
+                duration: { show: true, label: 'Instructions', placeholder: 'e.g. Fasting required' }
+            },
+            'Procedure': {
+                name: { label: 'Procedure Name', placeholder: 'e.g. Endoscopy', cols: 'col-md-7' },
+                dosage: { show: false, label: '', placeholder: '' },
+                duration: { show: false, label: '', placeholder: '' }
+            },
+            'Therapy': {
+                name: { label: 'Therapy Type', placeholder: 'e.g. Physiotherapy', cols: 'col-md-3' },
+                dosage: { show: true, label: 'Focus Area', placeholder: 'e.g. Lower Back' },
+                duration: { show: true, label: 'Sessions', placeholder: 'e.g. 10 Sessions' }
+            },
+            'Instruction': {
+                name: { label: 'Instruction', placeholder: 'e.g. Strict Bed Rest', cols: 'col-md-7' },
+                dosage: { show: false, label: '', placeholder: '' },
+                duration: { show: false, label: '', placeholder: '' }
+            }
+        };
+
+        // UI morphing function based on type selection
+        function updateEntryUI() {
+            if(!typeElem) return;
+            const type = typeElem.value;
+            const config = uiConfig[type] || uiConfig['Medicine'];
+
+            // Morph Name Column
+            nameLabel.textContent = config.name.label;
+            nameInput.placeholder = config.name.placeholder;
+            nameWrap.className = config.name.cols;
+
+            // Morph/Hide Dosage Column
+            if (config.dosage.show) {
+                dosageWrap.classList.remove('d-none');
+                dosageLabel.textContent = config.dosage.label;
+                dosageInput.placeholder = config.dosage.placeholder;
+            } else {
+                dosageWrap.classList.add('d-none');
+                dosageInput.value = ''; // clear hidden values
+            }
+
+            // Morph/Hide Duration Column
+            if (config.duration.show) {
+                durationWrap.classList.remove('d-none');
+                durationLabel.textContent = config.duration.label;
+                durationInput.placeholder = config.duration.placeholder;
+            } else {
+                durationWrap.classList.add('d-none');
+                durationInput.value = ''; // clear hidden values
+            }
+        }
+
+        if(typeElem) {
+            typeElem.addEventListener('change', updateEntryUI);
+            updateEntryUI(); // Trigger on load
+        }
+
+        // Bind 'Add Row' Button Logic 
+        const btnAddRow = document.getElementById("btn-add-rx-row");
+        const rxTableBody = document.getElementById("rx-table-body");
+
+        if (btnAddRow && rxTableBody) {
+            btnAddRow.addEventListener("click", function () {
+                const type = typeElem.value;
+                const name = nameInput.value.trim();
+                const dosage = dosageInput.value.trim();
+                const duration = durationInput.value.trim();
+
+                if (!name) {
+                    nameInput.focus();
+                    return;
+                }
+
+                // Calculate Badge Visuals
+                let badgeClass = "bg-secondary";
+                if (type === "Medicine") badgeClass = "bg-success";
+                else if (type === "Test") badgeClass = "bg-info";
+                else if (type === "Procedure") badgeClass = "bg-warning text-dark";
+                else if (type === "Therapy") badgeClass = "bg-primary";
+
+                // Inject Row with Hidden Form Inputs for Backend Payload (Backend doesn't need to change!)
+                const tr = document.createElement("tr");
+                tr.className = "border-bottom border-soft transition-row new-client-row";
+                
+                tr.innerHTML = `
+                    <td class="ps-3">
+                        <input type="hidden" name="item_type" value="${type}">
+                        <input type="hidden" name="item_name" value="${name}">
+                        <span class="badge ${badgeClass} me-2">${type}</span> ${name}
+                    </td>
+                    <td>
+                        <input type="hidden" name="item_dosage" value="${dosage}">
+                        ${dosage || '--'}
+                    </td>
+                    <td>
+                        <input type="hidden" name="item_duration" value="${duration}">
+                        ${duration || '--'}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 text-xxs fw-bold remove-client-row">
+                            <i class="bi bi-trash me-1"></i>Drop
+                        </button>
+                    </td>
+                `;
+
+                // Wipe placeholder empty state row if it exists
+                const emptyRow = rxTableBody.querySelector('td[colspan="4"]');
+                if (emptyRow) {
+                    emptyRow.parentElement.remove();
+                }
+
+                rxTableBody.appendChild(tr);
+
+                // Reset Fields after insertion
+                nameInput.value = "";
+                dosageInput.value = "";
+                durationInput.value = "";
+                nameInput.focus();
+            });
+
+            // Handle Row Dropping
+            rxTableBody.addEventListener("click", function (e) {
+                const removeBtn = e.target.closest(".remove-client-row");
+                if (removeBtn) {
+                    removeBtn.closest("tr").remove();
+                    
+                    // Re-inject placeholder if table is empty
+                    if (rxTableBody.querySelectorAll("tr").length === 0) {
+                        rxTableBody.innerHTML = `
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    No prescription items added yet
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

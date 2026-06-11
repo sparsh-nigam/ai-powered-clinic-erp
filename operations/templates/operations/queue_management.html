@@ -1,0 +1,635 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ======================================
+   MAIN WRAPPER
+====================================== */
+.queue-wrapper {
+    color: var(--bs-body-color);
+}
+
+/* ======================================
+   HEADER
+====================================== */
+.queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.queue-title {
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.queue-subtitle {
+    font-size: 14px;
+    color: var(--bs-secondary-color);
+}
+
+/* =========================================
+QUEUE SEARCH
+========================================= */
+.queue-search-wrapper {
+    margin-bottom: 22px;
+}
+.queue-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--bs-body-bg);
+    border: 1px solid rgba(120,120,120,0.18);
+    border-radius: 18px;
+    padding: 10px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+}
+.search-icon {
+    font-size: 16px;
+    margin-right: 12px;
+    opacity: 0.7;
+}
+.queue-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--bs-body-color);
+}
+.clear-search-btn {
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: rgba(239,68,68,0.12);
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 700;
+    display: none;
+}
+
+/* ======================================
+   LIVE BADGE
+====================================== */
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: rgba(239,68,68,0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.22);
+    font-size: 13px;
+    font-weight: 700;
+}
+.live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+    50% { opacity: 0.4; }
+}
+
+/* ======================================
+   DASHBOARD
+====================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.dashboard-card {
+    padding: 20px;
+    border-radius: 18px;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+.dashboard-card:hover {
+    transform: translateY(-3px);
+}
+.dashboard-card small {
+    font-size: 13px;
+    opacity: 0.85;
+}
+.dashboard-card h3 {
+    margin-top: 10px;
+    margin-bottom: 0;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+/* DASHBOARD COLORS */
+.waiting-card { background: linear-gradient(135deg,#f59e0b,#d97706); border: 1px solid rgba(245,158,11,0.25); }
+.remaining-card { background: linear-gradient(135deg,#3b82f6,#2563eb); border: 1px solid rgba(59,130,246,0.25); }
+.completed-card { background: linear-gradient(135deg,#10b981,#059669); border: 1px solid rgba(16,185,129,0.25); }
+.expired-card { background: linear-gradient(135deg,#64748b,#475569); border: 1px solid rgba(100,116,139,0.25); }
+.cancelled-card { background: linear-gradient(135deg,#ef4444,#dc2626); border: 1px solid rgba(239,68,68,0.25); }
+
+/* ======================================
+   MAIN LAYOUT
+====================================== */
+.queue-layout {
+    display: grid;
+    grid-template-columns: 2.1fr 0.9fr;
+    gap: 20px;
+}
+
+/* ======================================
+   TABLE CARD
+====================================== */
+.queue-table-card {
+    background: var(--bs-body-bg);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(120,120,120,0.18);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+}
+
+/* ======================================
+   TABLE HEADER
+====================================== */
+.queue-table-header {
+    padding: 22px;
+    background: linear-gradient(to right,#2563eb,#1d4ed8);
+    color: white;
+}
+.queue-table-title { font-size: 19px; font-weight: 700; }
+.queue-table-subtitle { font-size: 13px; opacity: 0.85; }
+
+/* ======================================
+   TABLE
+====================================== */
+.queue-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.queue-table thead {
+    background: rgba(37,99,235,0.06);
+}
+.queue-table th {
+    padding: 15px 16px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2563eb;
+    border-bottom: 1px solid rgba(120,120,120,0.12);
+    white-space: nowrap;
+}
+.queue-table td {
+    padding: 16px;
+    border-bottom: 1px solid rgba(120,120,120,0.08);
+    font-size: 14px;
+}
+.queue-row { transition: 0.15s; }
+.queue-row:hover { background: rgba(37,99,235,0.03); }
+
+.clear-filter-btn {
+    border: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(239,68,68,0.12);
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 700;
+    transition: 0.15s;
+}
+.clear-filter-btn:hover { background: rgba(239,68,68,0.18); }
+
+/* ======================================
+   TOKEN
+====================================== */
+.token-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg,#2563eb,#1d4ed8);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+}
+
+/* ======================================
+   STATUS PILLS
+====================================== */
+.status-pill {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* APPOINTMENT STATUS STYLES */
+.status-pending { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.22); }
+.status-completed { background: rgba(16,185,129,0.12); color: #059669; border: 1px solid rgba(16,185,129,0.22); }
+.status-inconsultation { background: rgba(139,92,246,0.12); color: #7c3aed; border: 1px solid rgba(139,92,246,0.22); }
+.status-expired { background: rgba(100,116,139,0.12); color: #475569; border: 1px solid rgba(100,116,139,0.22); }
+.status-cancelled { background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.22); }
+
+/* REVISIT TYPE STYLES */
+.status-eligible { background: rgba(14,165,233,0.12); color: #0284c7; border: 1px solid rgba(14,165,233,0.22); }
+.status-required { background: rgba(244,63,94,0.12); color: #e11d48; border: 1px solid rgba(244,63,94,0.22); }
+
+/* ======================================
+   ACTION LINK
+====================================== */
+.action-link {
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(37,99,235,0.08);
+    border: 1px solid rgba(37,99,235,0.14);
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 700;
+    transition: 0.15s;
+}
+.action-link:hover {
+    background: rgba(37,99,235,0.14);
+    color: #1d4ed8;
+}
+
+/* ======================================
+   SIDEBAR
+====================================== */
+.sidebar-widget {
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: white;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.doctor-sidebar { background: linear-gradient(180deg,#111827,#1f2937); }
+.payment-sidebar { background: linear-gradient(180deg,#065f46,#047857); }
+.sidebar-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+
+/* ======================================
+   WIDGET WORKFLOWS
+====================================== */
+.doctor-widget {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 12px;
+    transition: 0.15s;
+    cursor: pointer;
+}
+.doctor-widget:hover { background: rgba(59,130,246,0.18); }
+.doctor-count {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: #3b82f6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.payment-widget {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    transition: 0.15s;
+    cursor: pointer;
+}
+.paid-widget { background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.22); }
+.paid-widget:hover { background: rgba(16,185,129,0.24); }
+.pending-widget { background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.22); }
+.pending-widget:hover { background: rgba(245,158,11,0.24); }
+.waived-widget { background: rgba(59,130,246,0.18); border: 1px solid rgba(59,130,246,0.22); }
+.waived-widget:hover { background: rgba(59,130,246,0.24); }
+
+/* ======================================
+   RESPONSIVE LAYOUT MATRIX
+====================================== */
+@media(max-width:1200px){
+    .dashboard-grid { grid-template-columns: repeat(2,1fr); }
+    .queue-layout { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="queue-wrapper">
+    <!-- HEADER -->
+    <div class="queue-header">
+        <div>
+            <div class="queue-title">Queue Management</div>
+            <div class="queue-subtitle">Live Clinic Operations Dashboard</div>
+        </div>
+        <button id="clearFiltersBtn" class="clear-filter-btn" style="display:none;">Clear Filters</button>
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            Live Queue
+        </div>
+    </div>
+
+    <!-- DASHBOARD COUNTERS -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card waiting-card sub-filter-node" data-filter-type="status" data-filter-value="Pending">
+            <small>Waiting Queue</small>
+            <h3>{{ waiting_count }}</h3>
+        </div>
+        <div class="dashboard-card remaining-card sub-filter-node" data-filter-type="status" data-filter-value="In Consultation">
+            <small>Live Consultation</small>
+            <h3>{{ in_consultation_count }}</h3>
+        </div>
+        <div class="dashboard-card completed-card sub-filter-node" data-filter-type="status" data-filter-value="Completed">
+            <small>Completed</small>
+            <h3>{{ completed_count }}</h3>
+        </div>
+        <div class="dashboard-card expired-card sub-filter-node" data-filter-type="status" data-filter-value="Expired">
+            <small>Expired</small>
+            <h3>{{ expired_count }}</h3>
+        </div>
+        <div class="dashboard-card cancelled-card sub-filter-node" data-filter-type="status" data-filter-value="Cancelled">
+            <small>Cancelled</small>
+            <h3>{{ cancelled_count }}</h3>
+        </div>
+    </div>
+
+    <!-- PATIENT SEARCH WRAPPER -->
+    <div class="queue-search-wrapper">
+        <div class="queue-search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="queueSearch" class="queue-search-input" placeholder="Search Patient ID or Token...">
+            <button id="clearQueueSearch" class="clear-search-btn">✕</button>
+        </div>
+    </div>
+
+    <!-- MAIN GRID CONTAINER -->
+    <div class="queue-layout">
+        <!-- WORKFLOW TABLE PANEL -->
+        <div class="queue-table-card">
+            <div class="queue-table-header">
+                <div class="queue-table-title">Live Queue Workflow</div>
+                <div class="queue-table-subtitle">Reception Operations</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="queue-table">
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Patient ID</th>
+                            <th>Patient Name</th>
+                            <th>Doctor</th>
+                            <th>Session Status</th>
+                            <th>Revisit</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in appointments %}
+                        <tr class="queue-row"
+                            data-patient="{{ appointment.patient.patient_id|lower }}"
+                            data-token="{{ appointment.daily_token|stringformat:'s' }}"
+                            data-status="{{ appointment.status }}"
+                            data-billing-session-status="{{ appointment.billing_session_status }}"
+                            data-payment-status="{{ appointment.payment_status }}"
+                            data-doctor="{{ appointment.doctor.id }}">
+                            <td><div class="token-box">{{ appointment.daily_token }}</div></td>
+                            <td>{{ appointment.patient.patient_id }}</td>
+                            <td><strong>{{ appointment.patient }}</strong></td>
+                            <td>{{ appointment.doctor }}</td>
+                            
+                            <!-- BILLING SESSION STATUS -->
+                            <td>
+                                {% if appointment.billing_session_status == 'Completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif appointment.billing_session_status == 'Due Pending' %}
+                                    <span class="badge bg-warning text-dark">Due Pending</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Active</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- REVISIT -->
+                            <td>
+                                {% if appointment.patient.is_active_patient %}
+                                    <span class="status-pill status-eligible">Active</span>
+                                {% else %}
+                                    <span class="status-pill status-required">Expired</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- APPOINTMENT STATUS -->
+                            <td>
+                                {% if appointment.status == 'Pending' %}
+                                    <span class="status-pill status-pending">Pending</span>
+                                {% elif appointment.status == 'Completed' %}
+                                    <span class="status-pill status-completed">Completed</span>
+                                {% elif appointment.status == 'In Consultation' %}
+                                    <span class="status-pill status-inconsultation">In Consultation</span>
+                                {% elif appointment.status == 'Expired' %}
+                                    <span class="status-pill status-expired">Expired</span>
+                                {% else %}
+                                    <span class="status-pill status-cancelled">Cancelled</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ACTION CENTER PATHWAY -->
+                            <td>
+                                <a href="{% url 'action_center' appointment.id %}" class="action-link">Manage →</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR OPERATIONAL WIDGETS -->
+        <div>
+            <!-- DOCTOR LOAD CONSOLE -->
+            <div class="sidebar-widget doctor-sidebar">
+                <div class="sidebar-title">Doctor Queue Load</div>
+                {% for item in doctor_queue %}
+                <div class="doctor-widget sub-filter-node" data-filter-type="doctor" data-filter-value="{{ item.doctor.id }}">
+                    <div>
+                        <div class="fw-semibold">{{ item.doctor }}</div>
+                        <small style="opacity:0.7;">Consultation Queue</small>
+                    </div>
+                    <div class="doctor-count">{{ item.pending_count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- APPOINTMENT PAYMENT LOAD CONSOLE -->
+            <div class="sidebar-widget doctor-sidebar">
+
+                <div class="sidebar-title">
+                    Live Consultation Console
+                </div>
+
+                {% for appointment in live_consultations %}
+
+                    <div class="doctor-widget">
+
+                        <div>
+
+                            <div class="fw-semibold">
+                                {{ appointment.doctor }}
+                            </div>
+
+                            <small style="opacity:0.7;">
+                                → {{ appointment.patient }}
+                            </small>
+
+                        </div>
+
+                        <div class="doctor-count">
+                            LIVE
+                        </div>
+
+                    </div>
+
+                {% empty %}
+
+                    <div style="opacity:0.7;">
+                        No Active Consultations
+                    </div>
+
+                {% endfor %}
+
+            </div>
+            <div class="sidebar-widget payment-sidebar">
+                <div class="sidebar-title">Payment Overview</div>
+                <div class="payment-widget paid-widget sub-filter-node" data-filter-type="payment" data-filter-value="Paid">
+                    <span>Paid</span>
+                    <strong>{{ paid_count }}</strong>
+                </div>
+                <div class="payment-widget pending-widget" data-filter-type="payment" data-filter-value="Pending">
+                    <span>Pending</span>
+                    <strong>{{ pending_payment_count }}</strong>
+                </div>
+                <div class="payment-widget waived-widget sub-filter-node" data-filter-type="payment" data-filter-value="Waived">
+                    <span>Waived</span>
+                    <strong>{{ waived_count }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================
+CONSOLIDATED OPERATIONAL MATRIX ENGINE
+========================================= -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('queueSearch');
+    const clearSearchBtn = document.getElementById('clearQueueSearch');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const queueRows = document.querySelectorAll('.queue-row');
+
+    // Central Multi-Filter Memory Matrix State
+    const activeFilters = {
+        status: null,    // Tracks active card filters ('Pending', 'Remaining', etc.)
+        doctor: null,    // Tracks specific selected doctor primary ID keys
+        payment: null,   // Tracks selected billing state
+        searchText: ''   // Tracks alphanumeric target values
+    };
+
+    function evaluateDashboardVisibilityMatrix() {
+        let hasActiveFilters = !!(activeFilters.status || activeFilters.doctor || activeFilters.payment || activeFilters.searchText);
+        clearFiltersBtn.style.display = hasActiveFilters ? 'inline-flex' : 'none';
+        clearSearchBtn.style.display = activeFilters.searchText.length > 0 ? 'inline-flex' : 'none';
+
+        queueRows.forEach(row => {
+            // 1. Text Search matching evaluation
+            const patientId = row.dataset.patient || '';
+            const tokenNumber = row.dataset.token || '';
+            const matchesText = activeFilters.searchText === '' || 
+                                patientId.includes(activeFilters.searchText) || 
+                                tokenNumber.includes(activeFilters.searchText);
+
+            // 2. Status evaluation
+            let matchesStatus = true;
+            if (activeFilters.status) {
+                if (activeFilters.status === 'Remaining') {
+                    matchesStatus = (row.dataset.status === 'Pending' || row.dataset.status === 'In Consultation');
+                } else {
+                    matchesStatus = (row.dataset.status === activeFilters.status);
+                }
+            }
+
+            // 3. Doctor matching evaluation
+            const matchesDoctor = !activeFilters.doctor || (row.dataset.doctor === activeFilters.doctor);
+
+            // 4. Payment matching evaluation
+            const matchesPayment = !activeFilters.payment || (row.dataset.paymentStatus === activeFilters.payment);
+
+            // Conclude visibility map states securely
+            if (matchesText && matchesStatus && matchesDoctor && matchesPayment) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // Consolidated Event Listener for Node Selectors (Cards, Widgets, Buttons)
+    document.addEventListener('click', function(e) {
+        const filterNode = e.target.closest('.sub-filter-node, .payment-widget, .doctor-widget');
+        if (filterNode) {
+            const filterType = filterNode.dataset.filterType;
+            const filterValue = filterNode.dataset.filterValue;
+
+            // Toggle logic behavior
+            if (activeFilters[filterType] === filterValue) {
+                activeFilters[filterType] = null; // Uncheck filter if clicked again
+            } else {
+                activeFilters[filterType] = filterValue;
+            }
+            evaluateDashboardVisibilityMatrix();
+            return;
+        }
+
+        // Reset click intercept listener
+        if (e.target.id === 'clearFiltersBtn') {
+            activeFilters.status = null;
+            activeFilters.doctor = null;
+            activeFilters.payment = null;
+            activeFilters.searchText = '';
+            searchInput.value = '';
+            evaluateDashboardVisibilityMatrix();
+        }
+
+        if (e.target.id === 'clearQueueSearch') {
+            searchInput.value = '';
+            activeFilters.searchText = '';
+            evaluateDashboardVisibilityMatrix();
+        }
+    });
+
+    // Realtime Input change watcher
+    searchInput.addEventListener('input', function() {
+        activeFilters.searchText = this.value.toLowerCase().trim();
+        evaluateDashboardVisibilityMatrix();
+    });
+});
+</script>
+{% endblock %}

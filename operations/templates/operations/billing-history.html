@@ -1,0 +1,257 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="page-heading mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3>Billing History</h3>
+            <p class="text-muted">Complete billing sessions history of patient</p>
+        </div>
+        <div>
+            <a href="{% url 'billing' %}" class="btn btn-dark me-2">Back To Billing</a>
+            <button class="btn btn-success" onclick="window.print()">Export / Print History</button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- TOTAL SESSIONS -->
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary shadow-sm">
+            <div class="card-body">
+                <small class="opacity-85">Total Sessions</small>
+                <h3 class="fw-bold mt-1">{{ total_sessions }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOTAL REVENUE -->
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success shadow-sm">
+            <div class="card-body">
+                <small class="opacity-85">Total Revenue</small>
+                <h3 class="fw-bold mt-1">₹{{ total_revenue }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOTAL DUE -->
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-danger shadow-sm">
+            <div class="card-body">
+                <small class="opacity-85">Total Due</small>
+                <h3 class="fw-bold mt-1">₹{{ total_due }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPLETED -->
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-dark shadow-sm">
+            <div class="card-body">
+                <small class="opacity-85">Completed Sessions</small>
+                <h3 class="fw-bold mt-1">{{ completed_sessions }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border border-dark shadow-sm">
+    <div class="card-body">
+        <div class="mb-4">
+            <h5 class="fw-bold mb-1">{{ patient }}</h5>
+            <small class="text-muted">Patient ID: {{ patient.patient_id }}</small>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <input type="text" id="sessionSearch" class="form-control mb-2" placeholder="Search Session Number...">
+                <select id="dueFilter" class="form-select">
+                    <option value="all">All Sessions</option>
+                    <option value="due">Due Pending</option>
+                    <option value="cleared">Cleared Sessions</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle" id="historyTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Session</th>
+                        <th>Visit Type</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Paid</th>
+                        <th>Due</th>
+                        <th>Created</th>
+                        <th class="no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in billing_sessions %}
+                    <tr class="session-row {% if session.total_due > 0 %}table-danger{% elif session.session_status == 'Completed' %}table-success{% endif %}"
+                        data-session-num="{{ session.session_number|lower }}"
+                        data-status="{{ session.session_status }}">
+                        <td class="fw-semibold">{{ session.session_number }}</td>
+                        <td>
+                            {% if session.visit_type == 'OPD' %}
+                                <span class="badge bg-primary">OPD</span>
+                            {% elif session.visit_type == 'Emergency' %}
+                                <span class="badge bg-danger">Emergency</span>
+                            {% elif session.visit_type == 'Revisit' %}
+                                <span class="badge bg-warning text-dark">Revisit</span>
+                            {% else %}
+                                <span class="badge bg-dark">Manual</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.session_status == 'Completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif session.session_status == 'Due Pending' %}
+                                <span class="badge bg-warning text-dark">Due Pending</span>
+                            {% else %}
+                                <span class="badge bg-primary">{{ session.session_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>₹{{ session.total_amount }}</td>
+                        <td>₹{{ session.total_paid }}</td>
+                        <td>
+                            {% if session.total_due > 0 %}
+                                <span class="badge bg-danger">₹{{ session.total_due }}</span>
+                            {% else %}
+                                <span class="badge bg-success">Cleared</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap">{{ session.created_at|date:"d M Y h:i A" }}</td>
+                        <td class="no-print">
+                            <div class="d-flex gap-2">
+                                <button type="button" 
+                                        class="btn btn-sm btn-info viewSessionBtn"
+                                        data-session="{{ session.session_number }}"
+                                        data-status="{{ session.session_status }}"
+                                        data-total="{{ session.total_amount }}"
+                                        data-paid="{{ session.total_paid }}"
+                                        data-due="{{ session.total_due }}"
+                                        data-date="{{ session.created_at|date:'d M Y h:i A' }}">
+                                    View
+                                </button>
+                                {% if session.session_status == 'Completed' %}
+                                    <a href="{% url 'final_invoice' session.id %}" class="btn btn-sm btn-success">View Invoice</a>
+                                {% else %}
+                                    <a href="/operations/billing/0/?patient_search={{ patient.patient_id }}&session={{ session.id }}" class="btn btn-sm btn-dark">Open / Clear</a>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">Print</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-state-row">
+                        <td colspan="8" class="text-center text-muted py-4">No Billing Sessions Found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- DATA SUMMARY DETAILS CONSOLE MODAL -->
+<div class="modal fade" id="sessionDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">Session Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered mb-0">
+                    <tr><th class="bg-light" width="35%">Session</th><td id="modalSession"></td></tr>
+                    <tr><th class="bg-light">Status</th><td id="modalStatus"></td></tr>
+                    <tr><th class="bg-light">Total</th><td id="modalTotal" class="fw-bold"></td></tr>
+                    <tr><th class="bg-light">Paid</th><td id="modalPaid" class="text-success"></td></tr>
+                    <tr><th class="bg-light">Due</th><td id="modalDue" class="text-danger"></td></tr>
+                    <tr><th class="bg-light">Date</th><td id="modalDate"></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================
+APPLICATION ARCHITECTURE MOTOR
+========================================= -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('sessionSearch');
+    const dueFilter = document.getElementById('dueFilter');
+    const sessionRows = document.querySelectorAll('.session-row');
+    
+    // Initialize a single shared internal instance structure references variables mapping
+    const detailModalEl = document.getElementById('sessionDetailModal');
+    let bootstrapModalInstance = null;
+    if (detailModalEl) {
+        bootstrapModalInstance = new bootstrap.Modal(detailModalEl);
+    }
+
+    function processHistoryGridFilters() {
+        const searchValue = searchInput.value.toLowerCase().trim();
+        const filterValue = dueFilter.value;
+
+        sessionRows.forEach(row => {
+            const sessionNum = row.dataset.sessionNum || '';
+            const isDue = row.classList.contains('table-danger');
+            const isCleared = row.classList.contains('table-success');
+
+            const matchesSearch = sessionNum.includes(searchValue);
+            
+            let matchesFilter = true;
+            if (filterValue === 'due') matchesFilter = isDue;
+            else if (filterValue === 'cleared') matchesFilter = isCleared;
+
+            row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+        });
+    }
+
+    // Capture dynamic click delegations for view fields console presentation mappings
+    document.addEventListener('click', function(e) {
+        const viewBtn = e.target.closest('.viewSessionBtn');
+        if (viewBtn && bootstrapModalInstance) {
+            document.getElementById('modalSession').innerText = viewBtn.dataset.session;
+            document.getElementById('modalStatus').innerText = viewBtn.dataset.status;
+            document.getElementById('modalTotal').innerText = '₹' + viewBtn.dataset.total;
+            document.getElementById('modalPaid').innerText = '₹' + viewBtn.dataset.paid;
+            document.getElementById('modalDue').innerText = '₹' + viewBtn.dataset.due;
+            document.getElementById('modalDate').innerText = viewBtn.dataset.date;
+
+            bootstrapModalInstance.show();
+        }
+    });
+
+    searchInput.addEventListener('input', processHistoryGridFilters);
+    dueFilter.addEventListener('change', processHistoryGridFilters);
+});
+</script>
+
+<style media="print">
+    .btn, #sessionSearch, #dueFilter, .modal, .page-heading a, .no-print {
+        display: none !important;
+    }
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    table {
+        font-size: 11px;
+        width: 100% !important;
+    }
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 6px !important;
+    }
+</style>
+{% endblock %}

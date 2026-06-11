@@ -1,0 +1,1190 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   PATIENT COMMAND CENTER (PREMIUM CLINICAL PROFILE ARCHITECTURE)
+   ========================================================================== */
+.profile-wrapper {
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 10px 15px;
+}
+
+/* --------------------------------------------------------------------------
+   BACK NAVIGATION & BREADCRUMBS
+   -------------------------------------------------------------------------- */
+.profile-nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+.back-link:hover {
+    color: #3b82f6;
+    transform: translateX(-3px);
+}
+
+.profile-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-outline-action {
+    border: 1px solid var(--bs-border-color);
+    padding: 9px 16px;
+    border-radius: 10px;
+    background-color: var(--bs-card-bg);
+    color: var(--bs-body-color);
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.btn-outline-action:hover {
+    background-color: var(--bs-tertiary-bg);
+    border-color: var(--bs-secondary-color);
+    transform: translateY(-1px);
+}
+
+.btn-primary-action {
+    border: none;
+    padding: 9px 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white !important;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+.btn-primary-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   MASTER PROFILE HEADER CARD (DEEP NAVY THEME)
+   -------------------------------------------------------------------------- */
+.profile-header-card {
+    background-color: #0f172a;
+    border-radius: 20px;
+    padding: 28px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle background accent for the dark card */
+.profile-header-card::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1));
+    pointer-events: none;
+}
+
+.patient-identity {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.patient-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.patient-core-info h1 {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.patient-core-info p {
+    color: #94a3b8;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-divider {
+    color: #475569;
+}
+
+.patient-meta-grid {
+    display: flex;
+    gap: 32px;
+    text-align: right;
+    z-index: 1; /* Above the gradient pseudo-element */
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.meta-label {
+    color: #64748b;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.meta-value {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+/* --------------------------------------------------------------------------
+   INTERACTIVE TAB NAVIGATION
+   -------------------------------------------------------------------------- */
+.clinical-tabs-container {
+    background-color: var(--bs-card-bg);
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--bs-border-color);
+    border-bottom: none;
+    display: flex;
+    padding: 0 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.clinical-tabs-container::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    padding: 18px 24px;
+    color: var(--bs-secondary-color);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: var(--bs-body-color);
+}
+
+.tab-btn.active {
+    color: #3b82f6;
+    font-weight: 700;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 3px;
+    background-color: #3b82f6;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -2px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   TAB CONTENT PANELS & INNER CARDS
+   -------------------------------------------------------------------------- */
+.tab-content-wrapper {
+    background-color: var(--bs-card-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0 0 16px 16px;
+    padding: 24px;
+    min-height: 400px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.01);
+}
+
+.tab-panel {
+    display: none;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Inner Overview Grid */
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.info-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 20px;
+    background-color: var(--bs-body-bg);
+}
+
+.info-card-header {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--bs-secondary-color);
+    font-weight: 700;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    padding-bottom: 8px;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-list li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.info-list .detail-label {
+    color: var(--bs-secondary-color);
+    font-weight: 500;
+}
+
+.info-list .detail-value {
+    font-weight: 600;
+    color: var(--bs-body-color);
+}
+
+/* --------------------------------------------------------------------------
+   DATA TABLES (REUSED PREMIUM STYLES WITH ADDED BORDERS)
+   -------------------------------------------------------------------------- */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--bs-border-color); /* Added full table border */
+}
+
+.history-table th, .history-table td {
+    padding: 14px 18px;
+    border: 1px solid var(--bs-border-color); /* Added explicit cell borders */
+    vertical-align: middle;
+}
+
+.history-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--bs-secondary-color);
+    font-weight: 700;
+    background-color: var(--bs-body-bg);
+    text-align: left;
+    border-bottom: 2px solid var(--bs-border-color); /* Stronger bottom header border */
+}
+
+.history-table td {
+    font-size: 14px;
+}
+
+.history-table tr:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+/* Status Pills */
+.status-pill {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+.pill-green { background-color: rgba(16, 185, 129, 0.08); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.15); }
+.pill-amber { background-color: rgba(245, 158, 11, 0.08); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.15); }
+.pill-red { background-color: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); }
+.pill-slate { background-color: rgba(100, 116, 139, 0.08); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.15); }
+.pill-blue { background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.15); }
+
+/* Document Grid */
+.document-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+.doc-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    background-color: var(--bs-body-bg);
+    transition: all 0.2s ease;
+}
+.doc-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.1);
+    transform: translateY(-2px);
+}
+.doc-icon {
+    font-size: 32px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.doc-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    word-wrap: break-word;
+}
+.doc-date {
+    font-size: 11px;
+    color: var(--bs-secondary-color);
+    margin-bottom: 12px;
+}
+</style>
+
+<div class="profile-wrapper">
+    
+    <div class="profile-nav-bar">
+        <a href="{% url 'patients' %}" class="back-link">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            Back to Master Index
+        </a>
+        <div class="profile-actions">
+            <a href="{% url 'edit_patient' patient.id %}" class="btn-outline-action">Edit Profile</a>
+        </div>
+    </div>
+
+    <div class="profile-header-card">
+        <div class="patient-identity">
+            <div class="patient-avatar overflow-hidden p-0">
+                {% if profile_photo %}
+                    <img src="{{ profile_photo.file.url }}"
+                        alt="Patient Photo"
+                        style="width:100%; height:100%; object-fit:cover; border-radius:18px;">
+                {% else %}
+                    {{ patient.name|make_list|first|upper }}
+                {% endif %}
+            </div>
+            <div class="patient-core-info">
+                <h1>{{ patient.get_title_display|default:"" }} {{ patient.name }}</h1>
+                <p>
+                    {% if patient.is_active_patient %}
+                        <span class="pill-green status-pill" style="padding: 2px 8px; font-size: 10px;">Active Revisit</span>
+                    {% else %}
+                        <span class="pill-slate status-pill" style="padding: 2px 8px; font-size: 10px;">Expired Revisit</span>
+                    {% endif %}
+                    <span class="info-divider">•</span>
+                    {{ patient.get_gender_display|default:"Unspecified" }}, {{ patient.age }} yrs
+                    <span class="info-divider">•</span>
+                    Blood Group: {{ patient.blood_group|default:"Unknown" }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="patient-meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">Patient ID</span>
+                <span class="meta-value">{{ patient.patient_id }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Primary Contact</span>
+                <span class="meta-value">{{ patient.phone|default:"No Phone Provided" }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Registered On</span>
+                <span class="meta-value">{{ patient.created_at|date:"d M, Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="clinical-tabs-container">
+        <button class="tab-btn active" onclick="openProfileTab(event, 'tab-overview')">Clinical Overview</button>
+        <button class="tab-btn" onclick="openProfileTab(event, 'tab-appointments')">Appointments</button>
+        <button class="tab-btn" onclick="openProfileTab(event, 'tab-prescriptions')">Prescriptions</button>
+        <button class="tab-btn" onclick="openProfileTab(event, 'tab-billing')">Billing & Ledger</button>
+        <button class="tab-btn" onclick="openProfileTab(event, 'tab-documents')">Document Vault</button>
+    </div>
+
+    <div class="tab-content-wrapper">
+        
+        <div id="tab-overview" class="tab-panel active">
+            <div class="overview-grid">
+                <div class="info-card">
+                    <div class="info-card-header">General Medical Info</div>
+                    <ul class="info-list">
+                        <li><span class="detail-label">Primary Disease</span> <span class="detail-value">{{ patient.disease|default:"Not Specified" }}</span></li>
+                        <li><span class="detail-label">Allergies</span> <span class="detail-value {% if patient.allergies and patient.allergies != 'None known' %}text-danger{% endif %}">{{ patient.allergies|default:"None known" }}</span></li>
+                        <li>
+                            <span class="detail-label">
+                                Chronic Conditions
+                            </span>
+
+                            <span class="detail-value">
+
+                                {% if condition_records %}
+
+                                    {% for condition in condition_records %}
+
+                                        {{ condition.condition }}{% if not forloop.last %}, {% endif %}
+
+                                    {% endfor %}
+
+                                {% else %}
+
+                                    None
+
+                                {% endif %}
+
+                            </span>
+                        </li>
+                        <li><span class="detail-label">Address</span> <span class="detail-value" style="text-align: right; max-width: 150px;">{{ patient.address|default:"No address on file" }}</span></li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-header">Height & Weight</div>
+                    <ul class="info-list">
+                        
+                        <li><span class="detail-label">Height</span> <span class="detail-value">{{ patient.height|default:"--" }} cm</span></li>
+                        <li><span class="detail-label">Weight</span> <span class="detail-value">{{ patient.weight|default:"--" }} kg</span></li>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-appointments" class="tab-panel">
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Doctor</th>
+                            <th>Status</th>
+                            <th>Token </th>
+                            <th>Follow Up</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in appointments %}
+                        <tr>
+                            <td class="font-monospace fw-bold">{{ appt.created_at|date:"d M, Y - h:i A" }}</td>
+                            <td>{{ appt.doctor|default:"Unassigned" }}</td>
+                            <td>
+                                {% if appt.status == 'Completed' %}
+                                    <span class="status-pill pill-green">Completed</span>
+                                {% elif appt.status == 'Pending' %}
+                                    <span class="status-pill pill-amber">Pending</span>
+                                {% elif appt.status == 'Cancelled' %}
+                                    <span class="status-pill pill-red">Cancelled</span>
+                                {% else %}
+                                    <span class="status-pill pill-slate">{{ appt.status }}</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <a href="{% url 'appointment_success' appt.id %}" 
+                                class="badge bg-primary text-decoration-none px-3 py-2">
+                                    #{{ appt.daily_token }}
+                                </a>
+                            </td>
+
+                            <td>
+                                {% if appt.followup %}
+
+                                    <div>
+                                        <strong>
+
+                                        {% for condition in appt.followup.conditions.all %}
+
+                                            {{ condition.condition_name }}
+
+                                            {% if not forloop.last %}
+                                                +
+                                            {% endif %}
+
+                                        {% endfor %}
+
+                                        </strong>
+                                    </div>
+
+                                    <small>
+                                        {{ appt.followup.followup_days }} Days
+                                    </small>
+
+                                    <br>
+
+                                    <small class="text-info">
+                                        Due:
+                                        {{ appt.followup.followup_due_date }}
+                                    </small>
+
+                                {% else %}
+
+                                    <span class="text-muted">
+                                        No Follow-Up
+                                    </span>
+
+                                {% endif %}
+                            </td>
+
+                            <td>
+
+                                {% if appt.followup_editable %}
+
+                                <button
+                                    class="btn btn-sm btn-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#followupModal{{ appt.id }}"
+                                >
+                                    {% if appt.followup %}
+                                        Edit Follow-Up
+                                    {% else %}
+                                        Add Follow-Up
+                                    {% endif %}
+                                </button>
+
+                                {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Locked
+                                </span>
+
+                                {% endif %}
+
+                                </td>
+
+                        </tr>
+                        
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted fw-bold">No appointments found for this patient.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+            </div>
+        </div>
+
+        <div id="tab-prescriptions" class="tab-panel">
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Prescription Date</th>
+                            <th>Prescribed By</th>
+                            <th>Upload Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in appointments %}
+                            {% if appt.digital_prescription or appt.physical_prescription %}
+                            <tr>
+                                <td class="font-monospace fw-bold">{{ appt.appointment_date|default:appt.created_at|date:"d M, Y" }}</td>
+                                <td>{{ appt.doctor|default:"Unassigned" }}</td>
+                                <td class="font-monospace">
+                                    {% if appt.physical_prescription %}
+                                        {{ appt.physical_prescription.uploaded_at|date:"h:i A" }}
+                                    {% else %}
+                                        {{ appt.digital_prescription.created_at|date:"h:i A" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        {% if appt.digital_prescription %}
+                                        <a href="{% url 'prescription_print' appt.id %}" target="_blank" class="btn-outline-action" style="padding: 4px 10px; font-size: 11px;">
+                                            [ Digital Prescription ]
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if appt.physical_prescription %}
+                                        <a href="{{ appt.physical_prescription.file.url }}" target="_blank" class="btn-outline-action" style="padding: 4px 10px; font-size: 11px;">
+                                            [ Physical Prescription ]
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if not appointments %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted fw-bold">No prescriptions found on record.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-billing" class="tab-panel">
+            
+            <div class="overview-grid" style="margin-bottom: 24px;">
+                <div class="info-card" style="padding: 16px; text-align: center;">
+                    <div class="info-card-header" style="border: none; padding: 0; margin-bottom: 8px;">Active Sessions</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #3b82f6;" id="dash-active-count">0</div>
+                </div>
+                <div class="info-card" style="padding: 16px; text-align: center;">
+                    <div class="info-card-header" style="border: none; padding: 0; margin-bottom: 8px;">Settled Sessions</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #10b981;" id="dash-settled-count">0</div>
+                </div>
+                <div class="info-card" style="padding: 16px; text-align: center;">
+                    <div class="info-card-header" style="border: none; padding: 0; margin-bottom: 8px;">Pending Dues</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #ef4444;" id="dash-pending-count">0</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn-outline-action billing-filter-btn" data-filter="all" style="background-color: var(--bs-tertiary-bg); border-color: var(--bs-secondary-color);">All Sessions</button>
+                <button class="btn-outline-action billing-filter-btn" data-filter="active">Active</button>
+                <button class="btn-outline-action billing-filter-btn" data-filter="settled">Settled</button>
+                <button class="btn-outline-action billing-filter-btn" data-filter="pending">Pending Dues</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Date Opened</th>
+                            <th>Total Billed</th>
+                            <th>Session Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in billing_sessions %}
+                        <tr class="billing-row" data-category="{% with status=session.session_status|lower %}{% if 'settled' in status or 'completed' in status %}settled{% elif 'pending' in status or 'due' in status %}pending{% else %}active{% endif %}{% endwith %}">
+                            <td class="font-monospace fw-bold">BS-{{ session.id }}</td>
+                            <td class="font-monospace">{{ session.created_at|date:"d M, Y" }}</td>
+                            <td class="fw-bold">₹ {{ session.total_amount|default:"0" }}</td>
+                            <td>
+                                {% with status=session.session_status|lower %}
+                                    {% if 'settled' in status or 'completed' in status %}
+                                        <span class="status-pill pill-green">Settled</span>
+                                    {% elif 'pending' in status or 'due' in status %}
+                                        <span class="status-pill pill-red">Dues Pending</span>
+                                    {% else %}
+                                        <span class="status-pill pill-blue">Active</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td><a href="/operations/final-invoice/{{ session.id }}/" class="btn-outline-action" style="padding: 4px 10px; font-size: 11px;">View Invoice</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted fw-bold">No billing sessions generated yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-documents" class="tab-panel">
+            <div style="margin-bottom: 20px; text-align: right;">
+                <button class="btn-primary-action"
+                        data-bs-toggle="modal"
+                        data-bs-target="#uploadDocumentModal">
+                    + Upload Document
+                </button>
+            </div>
+            
+            {% if documents %}
+            <div class="document-grid">
+                {% for doc in documents %}
+                <div class="doc-card">
+                    <div class="doc-icon">📄</div>
+                    <div class="doc-name">{{ doc.file_type }}</div>
+                    <div class="doc-date">Uploaded: {{ doc.uploaded_at|date:"d M, Y • h:i A" }}</div>
+                    <a href="{{ doc.file.url }}" 
+                        class="btn-outline-action" 
+                        style="padding: 4px 10px; font-size: 11px; display: block;" 
+                        target="_blank">
+                        Download
+                    </a>
+                </div>
+                {% endfor %}
+                {% for proof in payment_proofs %}
+                <div class="doc-card">
+
+                    <div class="doc-icon">💳</div>
+
+                    <div class="doc-name">
+                        Payment Proof
+                    </div>
+
+                    <div class="doc-date">
+                        Uploaded:
+                        {{ proof.created_at|date:"d M, Y - h:i A" }}
+                    </div>
+
+                    <div style="font-size:11px; color:var(--bs-secondary-color); margin-bottom:12px; line-height:1.6;">
+
+                        {{ proof.transaction_type }} • ₹{{ proof.paid_amount }}
+
+                        <br>
+
+                        {{ proof.payment_mode }}
+
+                        {% if proof.appointment %}
+                            <br>
+                            Token:
+                            #{{ proof.appointment.daily_token }}
+                        {% endif %}
+
+                        {% if proof.billing_session %}
+                            <br>
+                            Session:
+                            BS-{{ proof.billing_session.id }}
+                        {% endif %}
+
+                    </div>
+                    <a href="{{ proof.payment_proof.url }}"
+                    class="btn-outline-action"
+                    style="padding:4px 10px; font-size:11px; display:block;"
+                    target="_blank">
+                    View Receipt
+                    </a>
+
+                </div>
+                {% endfor %}
+                {% for appt in appointment_payment_proofs %}
+                <div class="doc-card">
+
+                    <div class="doc-icon">🩺</div>
+
+                    <div class="doc-name">
+                        Consultation Payment
+                    </div>
+
+                    <div class="doc-date">
+                        Uploaded:
+                        {{ appt.created_at|date:"d M, Y - h:i A" }}
+                    </div>
+
+                    <div style="font-size:11px; color:var(--bs-secondary-color); margin-bottom:12px; line-height:1.6;">
+
+                        {{ appt.payment_mode }}
+                        •
+                        ₹{{ appt.amount_received }}
+
+                        <br>
+
+                        Token:
+                        #{{ appt.daily_token }}
+
+                    </div>
+
+                    <a href="{{ appt.payment_proof.url }}"
+                    class="btn-outline-action"
+                    style="padding:4px 10px; font-size:11px; display:block;"
+                    target="_blank">
+
+                    View Receipt
+
+                    </a>
+
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div style="font-size: 40px; color: var(--bs-border-color); margin-bottom: 10px;">📁</div>
+                <p class="text-muted fw-bold">The document vault is empty.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg"
+                    style="border-radius:18px;">
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="fw-bold">Upload Supporting Document</h5>
+
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body pt-3">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">
+                                    Document Type
+                                </label>
+
+                                <input type="text"
+                                    name="file_type"
+                                    class="form-control"
+                                    placeholder="Insurance / MRI / Consent Form"
+                                    required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">
+                                    Attach File
+                                </label>
+
+                                <input type="file"
+                                    name="file"
+                                    class="form-control"
+                                    required>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button"
+                                    class="btn btn-light"
+                                    data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-primary px-4">
+                                Upload
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% for appt in appointments %}
+    {% if appt.followup_editable %}
+
+        <div
+            class="modal fade"
+            id="followupModal{{ appt.id }}"
+            tabindex="-1"
+        >
+
+        <div class="modal-dialog">
+
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                Follow-Up Management
+            </h5>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+            ></button>
+        </div>
+
+        <form
+            method="POST"
+            action="{% url 'save_followup' appt.id %}"
+        >
+
+        {% csrf_token %}
+
+        <div class="modal-body">
+
+        <div class="mb-3">
+        <label class="form-label">
+        Follow-Up Topic
+        </label>
+
+        <input
+            type="text"
+            class="form-control"
+            name="followup_topic"
+            value="{% if appt.followup %}{{ appt.followup.followup_topic }}{% endif %}"
+        >
+        </div>
+
+        <div class="mb-3">
+
+            <label class="form-label fw-bold">
+                Follow-Up Conditions
+            </label>
+
+            <div class="border rounded p-3">
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Diabetes"
+                        
+                        {% if 'Diabetes' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Diabetes
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Hypertension"
+                        
+                        {% if 'Hypertension' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Hypertension
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Kidney Disease"
+                        
+                        {% if 'Kidney Disease' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Kidney Disease
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Liver Disease"
+                        
+                        {% if 'Liver Disease' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Liver Disease
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Thyroid"
+                        
+                        {% if 'Thyroid' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Thyroid
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Asthma"
+                        
+                        {% if 'Asthma' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Asthma
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="conditions"
+                        value="Heart Disease"
+                        
+                        {% if 'Heart Disease' in appt.selected_conditions %}
+                        checked
+                        {% endif %}>
+                    <label class="form-check-label">
+                        Heart Disease
+                    </label>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="mb-3">
+
+            <label class="form-label">
+                Custom Condition
+            </label>
+
+            <input
+                type="text"
+                class="form-control"
+                name="custom_condition"
+                placeholder="PCOD, Migraine, Arthritis"
+
+                value="{% for c in appt.followup.conditions.all %}{% if c.is_custom %}{{ c.condition_name }}{% endif %}{% endfor %}"
+            >
+
+        </div>
+
+        <div class="mb-3">
+
+        <label class="form-label">
+        Follow-Up Days
+        </label>
+
+        <input
+            type="number"
+            class="form-control"
+            name="followup_days"
+            value="{% if appt.followup %}{{ appt.followup.followup_days }}{% endif %}"
+            required
+        >
+
+        </div>
+
+        </div>
+
+        <div class="modal-footer">
+
+        <button
+            type="submit"
+            class="btn btn-success"
+        >
+            Save Follow-Up
+        </button>
+
+        </div>
+
+        </form>
+
+        </div>
+        </div>
+        </div>
+
+    {% endif %}
+{% endfor %}
+<script>
+function openProfileTab(evt, tabId) {
+    // 1. Hide all tab panels
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    tabPanels.forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    // 2. Remove 'active' class from all buttons
+    const tabLinks = document.querySelectorAll('.tab-btn');
+    tabLinks.forEach(link => {
+        link.classList.remove('active');
+    });
+
+    // 3. Show the targeted tab panel and add 'active' to the clicked button
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+
+// TASK 2 & 3: Lightweight JS for Mini Dashboard Counters and Filter Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const billingRows = document.querySelectorAll('.billing-row');
+    let activeCount = 0, settledCount = 0, pendingCount = 0;
+    
+    // Calculate dashboard metrics on load
+    billingRows.forEach(row => {
+        const category = row.getAttribute('data-category');
+        if (category === 'active') activeCount++;
+        if (category === 'settled') settledCount++;
+        if (category === 'pending') pendingCount++;
+    });
+    
+    // Inject counts into HTML
+    const activeEl = document.getElementById('dash-active-count');
+    const settledEl = document.getElementById('dash-settled-count');
+    const pendingEl = document.getElementById('dash-pending-count');
+    
+    if (activeEl) activeEl.textContent = activeCount;
+    if (settledEl) settledEl.textContent = settledCount;
+    if (pendingEl) pendingEl.textContent = pendingCount;
+    
+    // Filter click handlers
+    const filterBtns = document.querySelectorAll('.billing-filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Reset all buttons to default styling
+            filterBtns.forEach(b => {
+                b.style.backgroundColor = 'var(--bs-card-bg)';
+                b.style.borderColor = 'var(--bs-border-color)';
+            });
+            
+            // Apply active styling to the clicked button
+            this.style.backgroundColor = 'var(--bs-tertiary-bg)';
+            this.style.borderColor = 'var(--bs-secondary-color)';
+            
+            const filterValue = this.getAttribute('data-filter');
+            
+            // Show or hide rows based on filter
+            billingRows.forEach(row => {
+                if (filterValue === 'all' || row.getAttribute('data-category') === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

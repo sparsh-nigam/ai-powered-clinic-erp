@@ -1,0 +1,645 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="page-heading mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3>Smart Billing Center</h3>
+            <p class="text-muted">Consultation, medicine, procedures, emergency, dues and refund workflow</p>
+        </div>
+        <button class="btn btn-success allow-print" onclick="window.print()">Print Full Receipt</button>
+    </div>
+</div>
+
+<!-- =========================================
+PATIENT SEARCH
+========================================= -->
+{% if not appointment %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="mb-4">Search Patient Billing</h5>
+        <form method="GET">
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <input type="text" name="patient_search" class="form-control" placeholder="Enter Patient ID or Phone">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-primary w-100">Search Patient</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if patient %}
+<!-- =========================================
+TOP MINI DASHBOARD
+========================================= -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card text-white p-3" style="background: linear-gradient(135deg,#2563eb,#1d4ed8);">
+            <small>Patient</small>
+            <h5 class="mt-2">{{ patient.patient_id }}</h5>
+            <small>{{ patient }}</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card text-white p-3" style="background: linear-gradient(135deg,#10b981,#059669);">
+            <small>Appointment</small>
+            <h5 class="mt-2">{% if appointment %}{{ appointment.status }}{% else %}No Active Appointment{% endif %}</h5>
+            <small>{% if appointment %}{{ appointment.appointment_date }}{% else %}Billing Dashboard{% endif %}</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card text-white p-3" style="background: linear-gradient(135deg,#f59e0b,#d97706);">
+            <small>Billing Status</small>
+            <h5 class="mt-2">
+                {% if billing_session %}
+                    {{ billing_session.session_status }}
+                {% else %} 
+                    {{ overall_billing_status }} 
+                {% endif %}
+            </h5>
+            <small>Financial State</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card text-white p-3" style="background: linear-gradient(135deg,#7c3aed,#6d28d9);">
+            <small>Revisit Window</small>
+            <h5 class="mt-2">{% if patient.revisit_valid_till %}{{ patient.revisit_valid_till|date:"d M Y" }}{% else %}Expired{% endif %}</h5>
+            <small>Active Till Date</small>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================
+SESSIONS HISTORY
+========================================= -->
+{% if not billing_session %}
+<div class="card mb-4 border border-dark">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-1">Billing Sessions History</h5>
+                <small class="text-muted">All billing sessions of this patient</small>
+            </div>
+            {% if not appointment %}
+                <a href="?patient_search={{ patient.patient_id }}&new_session=true" class="btn btn-dark">+ Create New Session</a>
+                {% if billing_session %}
+                <form method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="close_session" value="true">
+                    <button class="btn btn-success">Close Current Session</button>
+                </form>
+                <a href="{% url 'billing_history' patient.patient_id %}" class="btn btn-primary">View Full History</a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Visit Type</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in billing_sessions %}
+                    <tr>
+                        <td>{{ session.session_number }}</td>
+                        <td>{{ session.visit_type }}</td>
+                        <td>{{ session.session_status }}</td>
+                        <td>{{ session.created_at|date:"d M Y h:i A" }}</td>
+                        <td>
+                            {% if session.session_status == 'Completed' %}
+                                <a href="/operations/final-invoice/{{ session.id }}/" class="btn btn-sm btn-success">View Invoice</a>
+                            {% elif session.session_status == 'Due Pending' %}
+                                <a href="/operations/billing/0/?patient_search={{ patient.patient_id }}&session={{ session.id }}" class="btn btn-sm btn-warning text-dark">Clear Due</a>
+                            {% else %}
+                                <a href="/operations/billing/0/?patient_search={{ patient.patient_id }}&session={{ session.id }}" class="btn btn-sm btn-dark">Open Session</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if billing_session %}
+<div class="mb-3">
+    <a href="/operations/billing/0/?patient_search={{ patient.patient_id }}" 
+       class="btn btn-outline-secondary">
+       ← Back to Sessions
+    </a>
+</div>
+{% endif %}
+
+{% if billing_session %}
+<div class="row">
+    <!-- LEFT SIDE PANELS -->
+    <div class="col-lg-7">
+
+        <!-- CONSULTATION CARD -->
+        {% if appointment %}
+        <div class="card border border-primary mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Current Appointment Billing</h5>
+                    <span class="badge bg-primary">CURRENT VISIT</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="consultation">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label>Fee</label>
+                            <input type="number" id="consultationTotal" name="total_amount" value="{% if consultation_transaction %}{{ consultation_transaction.total_amount }}{% endif %}" class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label>Paid</label>
+                            <input type="number" id="consultationPaid" name="paid_amount" value="{% if consultation_transaction %}{{ consultation_transaction.paid_amount }}{% endif %}" class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label>Remaining</label>
+                            <input type="number" id="consultationRemaining" readonly class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label>Status</label>
+                            <input type="text" id="consultationStatus" readonly class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label>Mode</label>
+                            <select name="payment_mode" class="form-select"><option>Cash</option><option>UPI</option><option>Card</option></select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Transaction ID</label>
+                            <input type="text" name="transaction_id" class="form-control">
+                        </div>
+                        {% comment %} <div class="col-md-4 mb-3">
+                            <label>Proof</label>
+                            <input type="file" name="payment_proof" class="form-control">
+                        </div> {% endcomment %}
+                    </div>
+                    <button class="btn btn-primary me-2">Submit Consultation</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-primary allow-print">Print</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- MEDICINE CARD -->
+        <div class="card border border-warning mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Medicine Charges</h5>
+                    <span class="badge bg-warning text-dark">MEDICAL STORE</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="medicine">
+                    <table class="table table-bordered mb-3" id="medicineTable">
+                        <thead>
+                            <tr><th>Medicine Name</th><th width="15%">Qty</th><th width="20%">Price</th><th width="20%">Total</th><th width="10%"></th></tr>
+                        </thead>
+                        <tbody>
+                        {% if medicine_items_data %}
+                            {% for item in medicine_items_data %}
+                            <tr>
+                                <td><input type="text" name="medicine_name[]" value="{{ item.item_name }}" class="form-control"></td>
+                                <td><input type="number" name="medicine_qty[]" value="{{ item.quantity }}" class="form-control item-qty"></td>
+                                <td><input type="number" name="medicine_price[]" value="{{ item.price }}" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="{{ item.total_price }}" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td><input type="text" name="medicine_name[]" class="form-control"></td>
+                                <td><input type="number" name="medicine_qty[]" value="1" class="form-control item-qty"></td>
+                                <td><input type="number" name="medicine_price[]" value="0" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="0" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                    {% if not billing_session or billing_session.session_status == 'Active' %}
+                        <button type="button" class="btn btn-sm btn-primary mb-3 add-row-btn" data-table="medicine">+ Add Medicine</button>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label>Total</label><input type="number" id="medicineTotal" name="total_amount" readonly class="form-control"></div>
+                        <div class="col-md-2 mb-3">
+                            <label>Discount %</label>
+                            <input type="number"
+                                id="medicineDiscount"
+                                name="medicine_discount"
+                                value="0"
+                                min="0"
+                                max="100"
+                                class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label>Net Total</label>
+                            <input type="number"
+                                id="medicineNetTotal"
+                                readonly
+                                class="form-control">
+                        </div>
+                    </div>
+                    <button class="btn btn-warning text-dark me-2">Save Medicine</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-warning allow-print">Print</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- PROCEDURE CARD -->
+        <div class="card border border-info mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Procedure Charges</h5>
+                    <span class="badge bg-info text-dark">PROCEDURES</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="procedure">
+                    <table class="table table-bordered mb-3" id="procedureTable">
+                        <thead>
+                            <tr><th>Procedure Name</th><th width="15%">Qty</th><th width="20%">Charge</th><th width="20%">Total</th><th width="10%"></th></tr>
+                        </thead>
+                        <tbody>
+                        {% if procedure_items_data %}
+                            {% for item in procedure_items_data %}
+                            <tr>
+                                <td><input type="text" name="procedure_name[]" value="{{ item.item_name }}" class="form-control"></td>
+                                <td><input type="number" name="procedure_qty[]" value="{{ item.quantity }}" class="form-control item-qty"></td>
+                                <td><input type="number" name="procedure_price[]" value="{{ item.price }}" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="{{ item.total_price }}" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td><input type="text" name="procedure_name[]" class="form-control"></td>
+                                <td><input type="number" name="procedure_qty[]" value="1" class="form-control item-qty"></td>
+                                <td><input type="number" name="procedure_price[]" value="0" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="0" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                    {% if not billing_session or billing_session.session_status == 'Active' %}
+                        <button type="button" class="btn btn-sm btn-info mb-3 add-row-btn" data-table="procedure">+ Add Procedure</button>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label>Total</label><input type="number" id="procedureTotal" name="total_amount" readonly class="form-control"></div>
+                    </div>
+                    <button class="btn btn-info me-2">Save Procedure</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-info allow-print">Print</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- EMERGENCY CARD -->
+        <div class="card border border-dark mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Emergency Charges</h5>
+                    <span class="badge bg-dark">EMERGENCY</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="emergency">
+                    <table class="table table-bordered mb-3" id="emergencyTable">
+                        <thead>
+                            <tr><th>Emergency Service</th><th width="15%">Qty</th><th width="20%">Charge</th><th width="20%">Total</th><th width="10%"></th></tr>
+                        </thead>
+                        <tbody>
+                        {% if emergency_items_data %}
+                            {% for item in emergency_items_data %}
+                            <tr>
+                                <td><input type="text" name="emergency_name[]" value="{{ item.item_name }}" class="form-control"></td>
+                                <td><input type="number" name="emergency_qty[]" value="{{ item.quantity }}" class="form-control item-qty"></td>
+                                <td><input type="number" name="emergency_price[]" value="{{ item.price }}" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="{{ item.total_price }}" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td><input type="text" name="emergency_name[]" class="form-control"></td>
+                                <td><input type="number" name="emergency_qty[]" value="1" class="form-control item-qty"></td>
+                                <td><input type="number" name="emergency_price[]" value="0" class="form-control item-price"></td>
+                                <td><input type="number" readonly value="0" class="form-control item-row-total"></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+                            </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                    {% if not billing_session or billing_session.session_status == 'Active' %}
+                        <button type="button" class="btn btn-sm btn-dark mb-3 add-row-btn" data-table="emergency">+ Add Emergency Charge</button>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label>Total</label><input type="number" id="emergencyTotal" name="total_amount" readonly class="form-control"></div>
+                    
+                    </div>
+                    <button class="btn btn-dark me-2">Save Emergency</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-dark allow-print">Print</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- DUES CLEARANCE -->
+        {% if not billing_session or billing_session.session_status != 'Completed' %}
+        <div class="card border border-danger mb-4">    
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Clear Previous Dues</h5>
+                    <span class="badge bg-danger">DUES</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="clear_due">
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label>Total Due</label><input type="number" value="{{ total_pending }}" readonly class="form-control"></div>
+                        <div class="col-md-3 mb-3"><label>Repayment Amount</label><input type="number" id="dueRepayment" name="repayment_amount" class="form-control allow-due-clear"></div>
+                        <div class="col-md-3 mb-3">
+                            <label>Payment Mode</label>
+                            <select name="payment_mode" class="form-select allow-due-clear">
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Card">Card</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3"><label>Transaction ID</label><input type="text" name="transaction_id" class="form-control allow-due-clear"></div>
+                        <div class="col-md-3 mb-3"><label>Upload Proof</label><input type="file" name="payment_proof" class="form-control allow-due-clear"></div>
+                    </div>
+                    <button type="submit" class="btn btn-danger due-submit-btn allow-due-clear me-2">Clear Due</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-danger allow-print">Print Due Receipt</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT SIDE TOTAL RECEIPT -->
+    <div class="col-lg-5">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-body">
+                <h5 class="mb-4">Total Billing Receipt</h5>
+                <table class="table table-bordered align-middle" id="receiptTable">
+                    <thead>
+                        <tr><th>Charge Type</th><th>Amount</th>{% if not billing_session or billing_session.session_status == 'Active' %}<th>Action</th>{% endif %}</tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.transaction_type }}</td>
+                            <td>₹{{ transaction.total_amount }}</td>
+                            <td>
+                                {% if not billing_session or billing_session.session_status == 'Active' %}
+                                <button type="button" class="btn btn-danger btn-sm deleteTransactionBtn" data-id="{{ transaction.id }}">Delete</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <form method="POST" class="billing-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="final_bill">
+                    <input type="hidden" name="finalize_session" value="true">
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label>Total Bill</label><input type="number" id="finalBillTotal" value="{{ total_bill }}" readonly class="form-control"></div>
+                        <div class="col-md-6 mb-3"><label>Total Paid</label><input type="number" id="finalBillPaid" name="paid_amount" value="{{ total_paid }}" class="form-control" {% if billing_session and billing_session.session_status == 'Completed' %}readonly{% endif %}></div>
+                        <div class="col-md-6 mb-3"><label>Remaining Due</label><input type="number" id="finalBillRemaining" readonly class="form-control"></div>
+                        <div class="col-md-6 mb-3"><label>Status</label><input type="text" id="finalBillStatus" readonly class="form-control"></div>
+                    </div>
+                    <div class="row">
+
+                        <div class="col-md-4 mb-3">
+                            <label>Payment Mode</label>
+                            <select name="payment_mode" class="form-select">
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Card">Card</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label>Transaction ID</label>
+                            <input type="text"
+                                name="transaction_id"
+                                class="form-control">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label>Upload Proof</label>
+                            <input type="file"
+                                name="payment_proof"
+                                class="form-control">
+                        </div>
+
+                    </div>
+                    <button class="btn btn-success w-100 mb-2">Process Total Bill</button>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-success w-100 allow-print">Print Final Receipt</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- =========================================
+APPLICATION LOGIC MOTOR
+========================================= -->
+<script>
+const sessionLocked = "{% if edit_locked %}true{% else %}false{% endif %}";
+
+// Central calculation logic engine
+function calculatePaymentStatus(total, paid, remainingId, statusId) {
+    let rInput = document.getElementById(remainingId);
+    let sInput = document.getElementById(statusId);
+    if (!rInput || !sInput) return;
+
+    let remaining = Math.max(0, total - paid);
+    rInput.value = remaining.toFixed(2);
+
+    if (total <= 0) sInput.value = '';
+    else if (remaining <= 0) sInput.value = 'Paid';
+    else if (paid <= 0) sInput.value = 'Pending';
+    else sInput.value = 'Dues Pending';
+}
+
+function processAllMathematicalMatrices() {
+    ['medicine', 'procedure', 'emergency'].forEach(prefix => {
+        let runningTotal = 0;
+        let table = document.getElementById(`${prefix}Table`);
+        if (!table) return;
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            let qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+            let price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+            let rowTotal = qty * price;
+            
+            let rowTotalField = row.querySelector('.item-row-total');
+            if (rowTotalField) rowTotalField.value = rowTotal.toFixed(2);
+            runningTotal += rowTotal;
+        });
+
+        if (prefix === 'medicine') {
+
+            let discount =
+                parseFloat(
+                    document.getElementById('medicineDiscount')?.value
+                ) || 0;
+
+            let netTotal =
+                runningTotal -
+                ((runningTotal * discount) / 100);
+
+            document.getElementById('medicineNetTotal').value =
+                netTotal.toFixed(2);
+
+            document.getElementById('medicineTotal').value =
+                netTotal.toFixed(2);
+        }
+
+        let totalField = document.getElementById(`${prefix}Total`);
+
+        if (totalField && prefix !== 'medicine') {
+            totalField.value = runningTotal.toFixed(2);
+        }
+    });
+
+    if (document.getElementById('consultationTotal')) {
+        let cTotal = parseFloat(document.getElementById('consultationTotal').value) || 0;
+        let cPaid = parseFloat(document.getElementById('consultationPaid').value) || 0;
+        calculatePaymentStatus(cTotal, cPaid, 'consultationRemaining', 'consultationStatus');
+    }
+
+    let fTotal = parseFloat(document.getElementById('finalBillTotal').value) || 0;
+    let fPaid = parseFloat(document.getElementById('finalBillPaid').value) || 0;
+    calculatePaymentStatus(fTotal, fPaid, 'finalBillRemaining', 'finalBillStatus');
+}
+
+// FIX: Runs calculations anytime ANY numeric calculation element is typed into or altered
+document.addEventListener('input', function(e) {
+    if (e.target.type === 'number') {
+        processAllMathematicalMatrices();
+    }
+});
+
+document.addEventListener('click', function(e) {
+    let addBtn = e.target.closest('.add-row-btn');
+    if (addBtn) {
+        let type = addBtn.dataset.table;
+        let tbody = document.querySelector(`#${type}Table tbody`);
+        let html = `
+            <tr>
+                <td><input type="text" name="${type}_name[]" class="form-control"></td>
+                <td><input type="number" name="${type}_qty[]" value="1" class="form-control item-qty"></td>
+                <td><input type="number" name="${type}_price[]" value="0" class="form-control item-price"></td>
+                <td><input type="number" readonly value="0" class="form-control item-row-total"></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button></td>
+            </tr>`;
+        tbody.insertAdjacentHTML('beforeend', html);
+    }
+
+    if (e.target.classList.contains('remove-row-btn')) {
+        let row = e.target.closest('tr');
+        let tbody = row.parentNode;
+        if (tbody.querySelectorAll('tr').length > 1) {
+            row.remove();
+            processAllMathematicalMatrices();
+        } else {
+            alert("At least one target charge row must exist.");
+        }
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('deleteTransactionBtn')) {
+        let transactionId = e.target.dataset.id;
+        if (confirm("Confirm structural deletion of this record?")) {
+            fetch(`/operations/delete-billing/${transactionId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(res => res.json())
+            .then(data => { if (data.success) location.reload(); });
+        }
+    }
+});
+
+document.querySelectorAll('.billing-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        let btn = form.querySelector('button[type="submit"], button:not([type])');
+        if (!btn || btn.disabled) return;
+
+        btn.disabled = true;
+        let origTxt = btn.innerHTML;
+        btn.innerHTML = 'Processing data...';
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = origTxt;
+            if (data.success) {
+                if (data.session_status === 'Completed' || data.session_status === 'Due Pending') {
+                    alert(data.session_status === 'Completed' 
+                        ? 'Billing Session Completed Successfully!' 
+                        : 'Bill Processed with Outstanding Balance.'
+                    );
+                    window.location.href = `/operations/final-invoice/${data.session_id}/`;
+                    return;
+                }
+                
+                alert('Data Saved Successfully');
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to save billing information.');
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = origTxt;
+            alert('Server network error encountered.');
+        });
+    });
+});
+
+window.addEventListener('load', () => {
+    processAllMathematicalMatrices();
+    
+    if (sessionLocked === 'true') {
+        document.querySelectorAll('.billing-form').forEach(form => {
+            let type = form.querySelector('input[name="form_type"]')?.value;
+            if (type !== 'clear_due' && type !== 'final_bill') {
+                form.querySelectorAll('input, select, textarea, button').forEach(el => {
+                    if (!el.classList.contains('allow-print')) el.disabled = true;
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
